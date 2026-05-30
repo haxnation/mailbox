@@ -455,8 +455,7 @@ document.getElementById('admin-assign-form').onsubmit = async (e) => {
 // --- INITIALIZATION ---
 async function init() {
     // Check if this is an OAuth callback with a ?code= parameter
-    const isCallback = await handleOAuthCallback();
-    if (isCallback) return;
+    await handleOAuthCallback();
 
     if (token) {
         user = parseJwt(token);
