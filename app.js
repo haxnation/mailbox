@@ -2,7 +2,7 @@
 // Change these to match your deployment
 const API_URL = 'https://api.haxnation.org/mail/api'; // Pointing directly to the /api routes
 const OIDC_ISSUER_URL = 'https://api.haxnation.org/auth';
-const OIDC_CLIENT_ID = 'webmail-app'; // Set this to your hax-auth client ID
+const OIDC_CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // Set this to your hax-auth client ID
 const OIDC_REDIRECT_URI = 'https://api.haxnation.org/mail/auth/callback'; // The backend callback URL
 
 // --- STATE ---
