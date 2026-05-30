@@ -6,8 +6,6 @@ const OIDC_CLIENT_ID = 'webmail-app'; // Set this to your hax-auth client ID
 const OIDC_REDIRECT_URI = 'https://api.haxnation.org/mail/auth/callback'; // The backend callback URL
 
 // --- STATE ---
-let token = localStorage.getItem('access_token') || null;
-let refreshToken = localStorage.getItem('refresh_token') || null;
 let user = null;
 let currentMailbox = null;
 let currentEmails = [];
@@ -50,87 +48,29 @@ function showView(viewName) {
 nav.webmail.onclick = () => showView('webmail');
 nav.settings.onclick = () => showView('settings');
 nav.admin.onclick = () => showView('admin');
-nav.logout.onclick = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    token = null;
-    refreshToken = null;
+nav.logout.onclick = async () => {
+    try {
+        await apiCall('/auth/logout', { method: 'POST' });
+    } catch (e) {}
     user = null;
     window.location.reload();
 };
 
 // --- OIDC LOGIN ---
 document.getElementById('btn-login').onclick = () => {
-    // Generate a random state for CSRF protection
-    const state = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-    sessionStorage.setItem('oauth_state', state);
-
-    const params = new URLSearchParams({
-        client_id: OIDC_CLIENT_ID,
-        redirect_uri: OIDC_REDIRECT_URI,
-        response_type: 'code',
-        scope: 'openid profile email',
-        state: state
-    });
-
-    window.location.href = `${OIDC_ISSUER_URL}/authorize?${params.toString()}`;
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = `${API_URL}/auth/login?returnTo=${encodeURIComponent(currentPath)}`;
 };
-
-// --- HANDLE CALLBACK (from backend redirect) ---
-async function handleOAuthCallback() {
-    // Check if tokens are in the URL hash (from backend redirect)
-    if (window.location.hash.includes('access_token=')) {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshTokenHash = hashParams.get('refresh_token');
-        
-        if (accessToken) {
-            localStorage.setItem('access_token', accessToken);
-            if (refreshTokenHash) {
-                localStorage.setItem('refresh_token', refreshTokenHash);
-            }
-            
-            // Clean the URL to hide the tokens from the address bar
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            token = accessToken;
-            refreshToken = refreshTokenHash;
-            return true; // Tokens acquired successfully
-        }
-    }
-    
-    // Check for errors passed from backend redirect
-    const queryParams = new URLSearchParams(window.location.search);
-    if (queryParams.get('error')) {
-        alert('Login failed: ' + queryParams.get('error'));
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return false;
-    }
-
-    return false;
-}
 
 // --- API HELPER ---
 async function apiCall(endpoint, options = {}) {
     if (!options.headers) options.headers = {};
-    if (token) options.headers['Authorization'] = `Bearer ${token}`;
     if (options.body) options.headers['Content-Type'] = 'application/json';
+    options.credentials = 'include'; // Important: send secure cookie session
 
     let res = await fetch(`${API_URL}${endpoint}`, options);
 
-    // If token expired, try to refresh
-    if (res.status === 403 && refreshToken) {
-        const refreshed = await tryRefreshToken();
-        if (refreshed) {
-            options.headers['Authorization'] = `Bearer ${token}`;
-            res = await fetch(`${API_URL}${endpoint}`, options);
-        }
-    }
-
     if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        token = null;
         user = null;
         showView('login');
         throw new Error('Session expired. Please log in again.');
@@ -140,27 +80,6 @@ async function apiCall(endpoint, options = {}) {
         throw new Error(err.error || 'API Request failed');
     }
     return res.json();
-}
-
-async function tryRefreshToken() {
-    try {
-        const res = await fetch(`${API_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken })
-        });
-        if (!res.ok) return false;
-        const tokens = await res.json();
-        token = tokens.access_token;
-        localStorage.setItem('access_token', tokens.access_token);
-        if (tokens.refresh_token) {
-            refreshToken = tokens.refresh_token;
-            localStorage.setItem('refresh_token', tokens.refresh_token);
-        }
-        return true;
-    } catch (e) {
-        return false;
-    }
 }
 
 // --- SAFE HTML RENDERING ---
@@ -454,25 +373,18 @@ document.getElementById('admin-assign-form').onsubmit = async (e) => {
 
 // --- INITIALIZATION ---
 async function init() {
-    // Check if this is an OAuth callback with a ?code= parameter
-    const isCallback = await handleOAuthCallback();
-    if (isCallback) return;
-
-    if (token) {
-        user = parseJwt(token);
-        if (user && (user.sub || user.id || user.user_id)) {
-            nav.actions.classList.remove('hidden');
-            if (user.userType === 'superadmin') {
-                nav.admin.classList.remove('hidden');
-            }
-            showView('webmail');
-        } else {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            token = null;
-            showView('login');
+    try {
+        const userData = await apiCall('/users/me');
+        user = userData;
+        
+        nav.actions.classList.remove('hidden');
+        if (user.userType === 'superadmin') {
+            nav.admin.classList.remove('hidden');
         }
-    } else {
+        showView('webmail');
+    } catch (err) {
+        // Not authenticated
+        user = null;
         showView('login');
     }
 }
