@@ -1453,6 +1453,22 @@ function initEvents() {
     // ---- Dark mode ----
     document.getElementById('btn-dark-toggle').onclick = toggleDarkMode;
 
+    // ---- Mobile Menu ----
+    const btnMobileMenu = document.getElementById('btn-mobile-menu');
+    const sidebar = document.getElementById('sidebar');
+    if (btnMobileMenu && sidebar) {
+        btnMobileMenu.onclick = () => {
+            sidebar.classList.toggle('hidden');
+        };
+        document.getElementById('content-area').addEventListener('click', (e) => {
+            if (window.innerWidth < 768 && !sidebar.classList.contains('hidden')) {
+                if (!sidebar.contains(e.target) && !btnMobileMenu.contains(e.target)) {
+                    sidebar.classList.add('hidden');
+                }
+            }
+        });
+    }
+
     // ---- Shortcuts ----
     document.getElementById('btn-shortcuts-help').onclick = () =>
         document.getElementById('modal-shortcuts').classList.remove('hidden');
