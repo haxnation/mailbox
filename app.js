@@ -132,14 +132,21 @@ function showToast(msg, type = 'default', duration = 3500) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast${type !== 'default' ? ` ${type}` : ''}`;
-    toast.innerHTML = `
-        <span class="material-icons-round" style="font-size:18px">${
-            type === 'success' ? 'check_circle'
-          : type === 'error'   ? 'error'
-          : type === 'warning' ? 'warning'
-          : 'info'
-        }</span>
-        <span>${msg}</span>`;
+
+    const icon = document.createElement('span');
+    icon.className = 'material-icons-round';
+    icon.style.fontSize = '18px';
+    icon.textContent =
+        type === 'success' ? 'check_circle'
+      : type === 'error'   ? 'error'
+      : type === 'warning' ? 'warning'
+      : 'info';
+
+    const text = document.createElement('span');
+    text.textContent = msg;
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
     container.appendChild(toast);
     setTimeout(() => toast.remove(), duration);
 }
