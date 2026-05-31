@@ -160,8 +160,10 @@ async function apiCall(endpoint, options = {}) {
         throw new Error('Session expired. Please log in again.');
     }
     if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'API request failed');
+        const errData = await res.json().catch(() => ({}));
+        const err = new Error(errData.error || 'API request failed');
+        err.status = res.status;
+        throw err;
     }
     return res.json();
 }
@@ -553,16 +555,12 @@ function groupByThread(emails) {
     return order.map(k => groups.get(k));
 }
 
-// =============================================================
-// OPEN EMAIL DETAIL (Phase 1 + 2)
-// =============================================================
-function openEmailDetail(email) {
+async function openEmailDetail(email) {
     const id = emailId(email);
     state.openEmail = email;
 
     // Mark as read
     markRead(id);
-    // Update row styling live
     const row = document.querySelector(`.email-row[data-idx="${state.displayEmails.indexOf(email)}"]`);
     if (row) row.classList.add('read');
 
@@ -593,20 +591,66 @@ function openEmailDetail(email) {
     // Labels row
     renderDetailLabels(id);
 
-    // Attachments (Phase 5)
+    // Attachments (metadata from DynamoDB, always available immediately)
     renderAttachments(email);
 
-    // Body
-    document.getElementById('detail-text').textContent = email.text || '(No text content)';
-    const htmlEl = document.getElementById('detail-html');
-    if (email.html) {
-        renderSafeHtmlEmail(htmlEl, email.html);
-    } else {
-        htmlEl.innerHTML = '<p style="color:var(--text-muted)">(No HTML content available)</p>';
-    }
+    // ── Body: lazy-load from S3 ──────────────────────────────────────────────
+    // Show spinner immediately so the user sees something while the fetch runs
+    const htmlEl   = document.getElementById('detail-html');
+    const textEl   = document.getElementById('detail-text');
+    const SPINNER  = `<div style="padding:32px;text-align:center;color:var(--text-muted)">
+        <span class="material-icons-round" style="font-size:32px;animation:spin 1s linear infinite;display:block;margin-bottom:8px">refresh</span>
+        Loading message…</div>`;
 
-    // Default text view
-    showBodyView('text');
+    htmlEl.innerHTML = SPINNER;
+    textEl.textContent = '';
+    showBodyView('html'); // show HTML pane while loading
+
+    try {
+        let body;
+
+        if (email.messageId) {
+            // Try the S3 body endpoint first (new emails)
+            try {
+                body = await apiCall(
+                    `/emails/${encodeURIComponent(state.currentMailbox)}/${encodeURIComponent(email.messageId)}/body`
+                );
+            } catch (s3Err) {
+                // 404 = old email whose body is still in DynamoDB (pre-migration)
+                // Fall back to fields already on the email object
+                if (s3Err.status === 404 || s3Err.message?.includes('404')) {
+                    body = { text: email.text || '', html: email.html || '' };
+                } else {
+                    throw s3Err;
+                }
+            }
+        } else {
+            // No messageId — shouldn't happen, but handle gracefully
+            body = { text: email.text || '', html: email.html || '' };
+        }
+
+        // Render body
+        document.getElementById('detail-text').textContent = body.text || '(No text content)';
+        if (body.html) {
+            renderSafeHtmlEmail(htmlEl, body.html);
+        } else {
+            htmlEl.innerHTML = `<p style="color:var(--text-muted);padding:16px">${body.text
+                ? escHtml(body.text).replace(/\n/g, '<br>')
+                : '(No content available)'}</p>`;
+        }
+
+        // Update attachment metadata if the S3 body includes richer info
+        if (body.attachments?.length > 0 && (!email.attachments || email.attachments.length === 0)) {
+            renderAttachments({ ...email, attachments: body.attachments });
+        }
+
+        showBodyView(body.html ? 'html' : 'text');
+    } catch (err) {
+        htmlEl.innerHTML = `<div style="color:var(--danger);padding:24px">
+            <span class="material-icons-round" style="vertical-align:middle">error_outline</span>
+            Failed to load message body.</div>`;
+        console.error('Body load error:', err);
+    }
 }
 
 function renderDetailLabels(id) {
