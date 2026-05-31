@@ -176,14 +176,11 @@ const VIEW_IDS = ['login', 'inbox', 'detail', 'settings', 'admin'];
 function showView(name) {
     VIEW_IDS.forEach(v => {
         const el = document.getElementById(`view-${v}`);
-        if (el) el.style.display = 'none';
+        if (el) el.classList.add('hidden');
     });
     const target = document.getElementById(`view-${name}`);
     if (target) {
-        target.style.display = 'flex';
-        // Ensure flex layout is correct for non-inbox views
-        if (name === 'inbox')    target.style.flexDirection = 'column';
-        if (name === 'login')    { target.style.alignItems = 'center'; target.style.justifyContent = 'center'; }
+        target.classList.remove('hidden');
     }
 
     // Update sidebar active
@@ -1236,7 +1233,7 @@ function initKeyboardShortcuts() {
                 closeCompose();
                 return;
             }
-            if (document.getElementById('view-detail').style.display !== 'none') {
+            if (!document.getElementById('view-detail').classList.contains('hidden')) {
                 showView('inbox');
                 return;
             }
@@ -1616,9 +1613,7 @@ async function init() {
         state.user = userData;
 
         // Show authed UI
-        document.getElementById('top-nav').style.display    = 'flex';
-        document.getElementById('sidebar').style.display    = 'flex';
-        document.getElementById('sidebar').style.flexDirection = 'column';
+        document.getElementById('top-nav').classList.remove('hidden');
         document.getElementById('sidebar').classList.remove('hidden');
 
         // Avatar
@@ -1641,9 +1636,7 @@ async function init() {
     } catch {
         state.user = null;
         showView('login');
-        document.getElementById('view-login').style.display = 'flex';
-        document.getElementById('view-login').style.alignItems = 'center';
-        document.getElementById('view-login').style.justifyContent = 'center';
+        showView('login');
     }
 }
 
