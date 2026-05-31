@@ -3,141 +3,1849 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Webmail</title>
-    <meta name="description" content="Custom webmail interface for managing domain emails">
-    <!-- Tailwind CSS CDN -->
+    <title>HaxMail — Webmail</title>
+    <meta name="description" content="HaxMail — Fast, secure webmail for haxnation.org domains">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- DOMPurify for safe HTML email rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
             integrity="sha384-X2xRn1UrV5E+QPgfnNmFJ5OA/MKtpFDcPSHmNOQ5PwxNKRUstKMmterlT6PLTj1"
             crossorigin="anonymous"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src *; img-src * data:; frame-src blob:;">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        /* ============================================================
+           CSS CUSTOM PROPERTIES — Light & Dark Mode
+        ============================================================ */
+        :root {
+            --bg-page:       #f6f8fc;
+            --bg-sidebar:    #ffffff;
+            --bg-card:       #ffffff;
+            --bg-hover:      #f1f3f4;
+            --bg-active:     #d3e3fd;
+            --bg-row-unread: #ffffff;
+            --bg-row-read:   #f2f6fc;
+            --bg-row-hover:  #e8f0fe;
+            --bg-compose:    #ffffff;
+            --bg-toast:      #323232;
+            --bg-input:      #ffffff;
+            --bg-nav:        #ffffff;
+
+            --text-primary:   #202124;
+            --text-secondary: #444746;
+            --text-muted:     #80868b;
+            --text-link:      #1a73e8;
+            --text-toast:     #ffffff;
+            --text-active:    #1a73e8;
+            --text-unread:    #202124;
+            --text-read:      #5f6368;
+
+            --border:         #e0e0e0;
+            --border-input:   #dadce0;
+            --border-focus:   #1a73e8;
+
+            --accent:         #1a73e8;
+            --accent-hover:   #1557b0;
+            --accent-light:   #e8f0fe;
+            --star-color:     #f4b400;
+            --danger:         #d93025;
+            --success:        #1e8e3e;
+            --warning:        #e37400;
+
+            --shadow-sm:      0 1px 2px rgba(0,0,0,.12);
+            --shadow-md:      0 2px 6px rgba(0,0,0,.12);
+            --shadow-lg:      0 8px 24px rgba(0,0,0,.14);
+            --shadow-compose: 0 8px 40px rgba(0,0,0,.2);
+
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+
+            --font: 'Google Sans', 'Inter', sans-serif;
+
+            /* Density tokens */
+            --row-padding: 8px 16px;
+            --row-font:    0.875rem;
+            --row-height:  auto;
+        }
+
+        body.dark {
+            --bg-page:       #111827;
+            --bg-sidebar:    #1f2937;
+            --bg-card:       #1f2937;
+            --bg-hover:      #2d3748;
+            --bg-active:     #1e3a5f;
+            --bg-row-unread: #1f2937;
+            --bg-row-read:   #17202e;
+            --bg-row-hover:  #263347;
+            --bg-compose:    #1f2937;
+            --bg-input:      #374151;
+            --bg-nav:        #1f2937;
+            --bg-toast:      #e8eaed;
+
+            --text-primary:   #e8eaed;
+            --text-secondary: #9aa0a6;
+            --text-muted:     #6b7280;
+            --text-link:      #8ab4f8;
+            --text-toast:     #202124;
+            --text-active:    #8ab4f8;
+            --text-unread:    #e8eaed;
+            --text-read:      #9aa0a6;
+
+            --border:         #374151;
+            --border-input:   #4b5563;
+            --border-focus:   #8ab4f8;
+
+            --accent:         #8ab4f8;
+            --accent-hover:   #6c9dde;
+            --accent-light:   #1e3a5f;
+        }
+
+        /* Density variants */
+        body.density-compact  { --row-padding: 4px 16px; --row-font: 0.8125rem; }
+        body.density-cozy     { --row-padding: 12px 16px; --row-font: 0.9rem; }
+
+        /* ============================================================
+           GLOBAL RESETS & BASE
+        ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font);
+            background: var(--bg-page);
+            color: var(--text-primary);
+            transition: background 0.2s, color 0.2s;
+        }
+
         .hidden { display: none !important; }
-        /* Sandboxed HTML email iframe */
+
+        /* ============================================================
+           APP SHELL
+        ============================================================ */
+        #app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ============================================================
+           TOP NAV BAR
+        ============================================================ */
+        #top-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        #nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 8px;
+            text-decoration: none;
+            min-width: 180px;
+        }
+
+        #nav-logo .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #1a73e8, #34a853);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: var(--font);
+            flex-shrink: 0;
+        }
+
+        #nav-logo .logo-text {
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: -0.3px;
+        }
+
+        #nav-search-wrap {
+            flex: 1;
+            max-width: 720px;
+            margin: 0 16px;
+        }
+
+        #nav-search-inner {
+            position: relative;
+            background: var(--bg-hover);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            transition: background 0.15s, box-shadow 0.15s;
+        }
+
+        #nav-search-inner:focus-within {
+            background: var(--bg-card);
+            box-shadow: 0 1px 3px rgba(0,0,0,.2), 0 0 0 1px var(--accent);
+        }
+
+        #nav-search-inner .material-icons-round {
+            color: var(--text-muted);
+            font-size: 20px;
+        }
+
+        #global-search {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 8px;
+            font-size: 1rem;
+            font-family: var(--font);
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        #global-search::placeholder { color: var(--text-muted); }
+
+        #nav-actions-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+        }
+
+        .nav-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: background 0.15s;
+        }
+
+        .nav-icon-btn:hover { background: var(--bg-hover); }
+
+        .nav-icon-btn .material-icons-round { font-size: 22px; }
+
+        #user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a73e8, #9c27b0);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-left: 4px;
+            flex-shrink: 0;
+            font-family: var(--font);
+        }
+
+        /* ============================================================
+           CONTENT AREA (SIDEBAR + MAIN)
+        ============================================================ */
+        #content-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ============================================================
+           SIDEBAR
+        ============================================================ */
+        #sidebar {
+            width: 256px;
+            background: var(--bg-sidebar);
+            flex-shrink: 0;
+            overflow-y: auto;
+            padding: 8px 0;
+            border-right: 1px solid var(--border);
+        }
+
+        #btn-compose-main {
+            margin: 8px 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #c2e7ff;
+            border: none;
+            border-radius: var(--radius-xl);
+            padding: 16px 24px;
+            cursor: pointer;
+            font-family: var(--font);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #001d35;
+            transition: background 0.15s, box-shadow 0.15s;
+            box-shadow: var(--shadow-sm);
+            width: calc(100% - 32px);
+        }
+
+        body.dark #btn-compose-main {
+            background: #004a77;
+            color: #c2e7ff;
+        }
+
+        #btn-compose-main:hover {
+            background: #a8d8f8;
+            box-shadow: var(--shadow-md);
+        }
+
+        body.dark #btn-compose-main:hover { background: #005993; }
+
+        #btn-compose-main .material-icons-round { font-size: 22px; }
+
+        .sidebar-section-label {
+            padding: 8px 16px 4px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 16px;
+            border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: background 0.12s;
+            margin-right: 16px;
+            user-select: none;
+        }
+
+        .sidebar-item:hover { background: var(--bg-hover); }
+
+        .sidebar-item.active {
+            background: var(--bg-active);
+            color: var(--text-active);
+            font-weight: 700;
+        }
+
+        .sidebar-item .material-icons-round { font-size: 20px; }
+
+        .sidebar-badge {
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .sidebar-item.active .sidebar-badge { color: var(--text-active); }
+
+        .sidebar-label-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 0;
+        }
+
+        .mailbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 16px;
+            border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            transition: background 0.12s;
+            margin-right: 16px;
+        }
+
+        .mailbox-item:hover { background: var(--bg-hover); }
+
+        .mailbox-item.active {
+            background: var(--bg-active);
+            color: var(--text-active);
+            font-weight: 600;
+        }
+
+        .mailbox-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a73e8, #34a853);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* ============================================================
+           MAIN PANEL
+        ============================================================ */
+        #main-panel {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-page);
+        }
+
+        /* ============================================================
+           EMAIL LIST (INBOX)
+        ============================================================ */
+        #view-inbox {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        #inbox-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #inbox-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-right: 4px;
+        }
+
+        #inbox-count-badge {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-right: auto;
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-input);
+            background: var(--bg-card);
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-family: var(--font);
+            color: var(--text-secondary);
+            transition: background 0.12s;
+            white-space: nowrap;
+        }
+
+        .toolbar-btn:hover { background: var(--bg-hover); }
+
+        .toolbar-btn .material-icons-round { font-size: 16px; }
+
+        #sort-select {
+            border: 1px solid var(--border-input);
+            border-radius: var(--radius-xl);
+            padding: 6px 12px;
+            font-size: 0.8125rem;
+            font-family: var(--font);
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* ============================================================
+           EMAIL ROWS
+        ============================================================ */
+        #emails-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-row {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: var(--row-padding);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-row-unread);
+            cursor: pointer;
+            transition: background 0.1s, box-shadow 0.1s;
+            position: relative;
+        }
+
+        .email-row:hover {
+            background: var(--bg-row-hover);
+            box-shadow: 0 1px 4px rgba(26,115,232,.08);
+            z-index: 1;
+        }
+
+        .email-row.read {
+            background: var(--bg-row-read);
+        }
+
+        .email-row.read .email-row-from,
+        .email-row.read .email-row-subject {
+            font-weight: 400;
+            color: var(--text-read);
+        }
+
+        .email-row.selected-kb {
+            background: var(--accent-light);
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+
+        /* Thread toggle */
+        .email-row.thread-child {
+            padding-left: 48px;
+            background: var(--bg-row-read);
+            border-left: 3px solid var(--accent);
+        }
+
+        .row-star {
+            width: 36px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.1s;
+            font-size: 20px;
+        }
+
+        .star-btn:hover { color: var(--star-color); }
+        .star-btn.starred { color: var(--star-color); }
+
+        .row-from {
+            width: 180px;
+            flex-shrink: 0;
+            overflow: hidden;
+            padding: 0 8px;
+        }
+
+        .email-row-from {
+            font-size: var(--row-font);
+            font-weight: 700;
+            color: var(--text-unread);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .row-content {
+            flex: 1;
+            min-width: 0;
+            padding: 0 8px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .email-row-subject {
+            font-size: var(--row-font);
+            font-weight: 700;
+            color: var(--text-unread);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .email-row-preview {
+            font-size: var(--row-font);
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .row-labels {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .label-chip-mini {
+            font-size: 0.6875rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .row-time {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 0 4px 0 8px;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .email-row.read .row-time { font-weight: 400; }
+
+        .row-actions {
+            flex-shrink: 0;
+            display: none;
+            gap: 4px;
+            padding: 0 4px;
+        }
+
+        .email-row:hover .row-actions { display: flex; }
+
+        .row-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s, color 0.1s;
+            font-size: 18px;
+        }
+
+        .row-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--danger);
+        }
+
+        /* Thread group header */
+        .thread-group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 16px 2px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-page);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .thread-group-header:hover { background: var(--bg-hover); }
+
+        .thread-count-badge {
+            background: var(--border);
+            border-radius: 10px;
+            padding: 1px 7px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================================
+           EMPTY STATE
+        ============================================================ */
+        #empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+        }
+
+        #empty-state .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        #empty-state p { font-size: 1rem; margin: 4px 0; }
+
+        /* ============================================================
+           EMAIL DETAIL VIEW
+        ============================================================ */
+        #view-detail {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        #detail-back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            font-family: var(--font);
+            padding: 8px 12px;
+            border-radius: var(--radius-xl);
+            margin-bottom: 16px;
+            transition: background 0.12s;
+        }
+
+        #detail-back-btn:hover { background: var(--bg-hover); }
+
+        #detail-subject {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        #detail-action-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .detail-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-input);
+            background: var(--bg-card);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-family: var(--font);
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: background 0.12s, border-color 0.12s;
+        }
+
+        .detail-action-btn:hover { background: var(--bg-hover); }
+
+        .detail-action-btn.danger { color: var(--danger); border-color: var(--danger); }
+        .detail-action-btn.danger:hover { background: #fce8e6; }
+
+        .detail-action-btn .material-icons-round { font-size: 18px; }
+
+        #detail-meta {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .meta-row {
+            display: flex;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .meta-row:last-child { margin-bottom: 0; }
+
+        .meta-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 50px;
+        }
+
+        #detail-body-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .toggle-btn {
+            padding: 6px 16px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-input);
+            background: var(--bg-card);
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-family: var(--font);
+            color: var(--text-secondary);
+            transition: background 0.12s, border-color 0.12s;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        #detail-text {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        #detail-html { }
+
         .email-html-frame {
             width: 100%;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
             background: white;
             min-height: 200px;
         }
+
+        /* Labels in detail */
+        #detail-labels-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .label-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+        }
+
+        .label-chip .remove-label {
+            font-size: 14px;
+            opacity: 0.8;
+            cursor: pointer;
+        }
+
+        #btn-add-label {
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px dashed var(--border-input);
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: var(--font);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        #btn-add-label:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Attachments */
+        #detail-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .attachment-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .attachment-chip .material-icons-round { font-size: 18px; color: var(--accent); }
+
+        /* ============================================================
+           COMPOSE OVERLAY
+        ============================================================ */
+        #compose-overlay {
+            position: fixed;
+            bottom: 0;
+            right: 32px;
+            width: 560px;
+            max-height: 80vh;
+            background: var(--bg-compose);
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            box-shadow: var(--shadow-compose);
+            display: flex;
+            flex-direction: column;
+            z-index: 500;
+            overflow: hidden;
+        }
+
+        #compose-overlay.fullscreen {
+            top: 60px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            border-radius: 0;
+        }
+
+        #compose-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: #404040;
+            color: white;
+            cursor: move;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+            flex-shrink: 0;
+        }
+
+        body.dark #compose-header { background: #1e3a5f; }
+
+        #compose-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .compose-header-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            opacity: 0.8;
+            transition: opacity 0.12s, background 0.12s;
+        }
+
+        .compose-header-btn:hover { opacity: 1; background: rgba(255,255,255,.15); }
+
+        #compose-fields {
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .compose-field {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding: 6px 16px;
+        }
+
+        .compose-field:last-child { border-bottom: none; }
+
+        .compose-field label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            min-width: 54px;
+            font-weight: 500;
+        }
+
+        .compose-field input,
+        .compose-field select {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            font-family: var(--font);
+            color: var(--text-primary);
+            outline: none;
+            padding: 4px 0;
+        }
+
+        #compose-rich-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .rich-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-family: var(--font);
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            transition: background 0.12s;
+            min-width: 28px;
+            justify-content: center;
+        }
+
+        .rich-btn:hover { background: var(--bg-hover); }
+        .rich-btn .material-icons-round { font-size: 18px; }
+
+        .rich-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        #compose-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            outline: none;
+            font-size: 0.9375rem;
+            font-family: var(--font);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 150px;
+        }
+
+        #compose-footer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        #btn-send-compose {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-xl);
+            padding: 10px 22px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        #btn-send-compose:hover { background: var(--accent-hover); }
+
+        /* Signature */
+        .compose-signature {
+            border-top: 1px solid var(--border);
+            margin-top: 16px;
+            padding-top: 8px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* ============================================================
+           SETTINGS VIEW
+        ============================================================ */
+        #view-settings {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .settings-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-bottom: 20px;
+            max-width: 640px;
+        }
+
+        .settings-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0 0 4px;
+            color: var(--text-primary);
+        }
+
+        .settings-card p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin: 0 0 16px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .settings-input {
+            flex: 1;
+            border: 1px solid var(--border-input);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            font-family: var(--font);
+            color: var(--text-primary);
+            background: var(--bg-input);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .settings-input:focus { border-color: var(--accent); }
+
+        .settings-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-input);
+            background: var(--bg-card);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-family: var(--font);
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: background 0.12s;
+        }
+
+        .settings-btn:hover { background: var(--bg-hover); }
+        .settings-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+        .settings-btn.primary:hover { background: var(--accent-hover); }
+        .settings-btn.danger { color: var(--danger); border-color: var(--danger); }
+        .settings-btn.danger:hover { background: #fce8e6; }
+
+        .signature-item {
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .signature-content {
+            flex: 1;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+
+        .sig-active-badge {
+            background: var(--accent);
+            color: white;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        #signature-textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid var(--border-input);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 0.875rem;
+            font-family: var(--font);
+            color: var(--text-primary);
+            background: var(--bg-input);
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.15s;
+            margin-bottom: 8px;
+        }
+
+        #signature-textarea:focus { border-color: var(--accent); }
+
+        .smtp-creds-box {
+            background: #1a1a2e;
+            color: #4ecca3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8125rem;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            word-break: break-all;
+            white-space: pre-wrap;
+            margin-top: 12px;
+        }
+
+        /* Density toggles */
+        .density-options {
+            display: flex;
+            gap: 8px;
+        }
+
+        .density-opt {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: border-color 0.15s;
+        }
+
+        .density-opt.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        /* ============================================================
+           ADMIN VIEW
+        ============================================================ */
+        #view-admin {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* ============================================================
+           LOGIN VIEW
+        ============================================================ */
+        #view-login {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-page);
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 48px 40px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .login-logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #1a73e8, #34a853);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+            margin: 0 auto 20px;
+            font-family: var(--font);
+        }
+
+        .login-card h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 8px;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            margin: 0 0 28px;
+            font-size: 0.9375rem;
+        }
+
+        #btn-login {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-xl);
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            box-shadow: var(--shadow-md);
+        }
+
+        #btn-login:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        #btn-login:active { transform: translateY(0); }
+
+        /* ============================================================
+           TOAST SYSTEM
+        ============================================================ */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-toast);
+            color: var(--text-toast);
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            pointer-events: all;
+            animation: toast-in 0.25s ease-out;
+            max-width: 480px;
+        }
+
+        .toast.success { background: var(--success); color: white; }
+        .toast.error   { background: var(--danger); color: white; }
+        .toast.warning { background: var(--warning); color: white; }
+
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(16px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ============================================================
+           MODALS
+        ============================================================ */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-box {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            max-width: 520px;
+            width: calc(100% - 32px);
+            box-shadow: var(--shadow-lg);
+            color: var(--text-primary);
+        }
+
+        .modal-box h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0 0 20px;
+        }
+
+        /* Shortcuts table */
+        .shortcuts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .shortcuts-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .shortcuts-table td:first-child {
+            font-weight: 700;
+            width: 100px;
+        }
+
+        kbd {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-size: 0.8125rem;
+            font-family: monospace;
+            color: var(--text-primary);
+        }
+
+        /* Label picker modal */
+        .label-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .label-picker-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.875rem;
+            border: 2px solid transparent;
+            transition: border-color 0.12s;
+        }
+
+        .label-picker-item:hover { background: var(--bg-hover); }
+        .label-picker-item.selected { border-color: var(--accent); }
+
+        /* ============================================================
+           REFRESH BAR
+        ============================================================ */
+        #refresh-bar {
+            position: sticky;
+            top: 0;
+            background: var(--accent);
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* ============================================================
+           SCROLLBARS
+        ============================================================ */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ============================================================
+           RESPONSIVE
+        ============================================================ */
+        @media (max-width: 768px) {
+            #sidebar { display: none; }
+            #compose-overlay { right: 0; width: 100%; }
+            .row-from { display: none; }
+        }
     </style>
-    <!-- CSP meta tag to restrict inline scripts and external resources -->
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src *; img-src * data:; frame-src blob:;">
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen">
-    <nav class="bg-blue-600 text-white shadow-md p-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold">Custom Webmail</h1>
-        <div id="nav-actions" class="hidden space-x-4">
-            <button id="nav-webmail" class="hover:underline">Webmail</button>
-            <button id="nav-admin" class="hover:underline hidden">Admin</button>
-            <button id="nav-settings" class="hover:underline">Settings</button>
-            <button id="nav-logout" class="hover:underline text-red-300">Logout</button>
+<body>
+
+<div id="app-shell">
+
+    <!-- ===== TOP NAV ===== -->
+    <nav id="top-nav" class="hidden" id="top-nav-auth">
+        <a id="nav-logo" href="#">
+            <div class="logo-icon">H</div>
+            <span class="logo-text">HaxMail</span>
+        </a>
+
+        <div id="nav-search-wrap">
+            <div id="nav-search-inner">
+                <span class="material-icons-round">search</span>
+                <input type="search" id="global-search" placeholder="Search mail" autocomplete="off" spellcheck="false">
+            </div>
+        </div>
+
+        <div id="nav-actions-right">
+            <button class="nav-icon-btn" id="btn-dark-toggle" title="Toggle dark mode">
+                <span class="material-icons-round" id="dark-icon">dark_mode</span>
+            </button>
+            <button class="nav-icon-btn" id="btn-refresh-nav" title="Refresh (r)">
+                <span class="material-icons-round">refresh</span>
+            </button>
+            <button class="nav-icon-btn" id="btn-shortcuts-help" title="Keyboard shortcuts (?)">
+                <span class="material-icons-round">keyboard</span>
+            </button>
+            <div id="user-avatar" title="Account">?</div>
         </div>
     </nav>
 
-    <main class="container mx-auto p-4 mt-4">
-        <!-- LOGIN VIEW -->
-        <div id="view-login" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md text-center">
-            <h2 class="text-2xl font-bold mb-4">Login Required</h2>
-            <p class="mb-6">Please log in using your hax-auth account.</p>
-            <button id="btn-login" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700">Login via OIDC</button>
-        </div>
+    <!-- ===== CONTENT (SIDEBAR + MAIN) ===== -->
+    <div id="content-area">
 
-        <!-- WEBMAIL VIEW -->
-        <div id="view-webmail" class="hidden flex flex-col md:flex-row gap-4">
-            <div class="md:w-1/4 bg-white p-4 rounded-lg shadow-md h-fit">
-                <h3 class="font-bold mb-2">Mailboxes</h3>
-                <ul id="mailbox-list" class="space-y-2"></ul>
-                <hr class="my-4">
-                <button id="btn-compose" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Compose</button>
+        <!-- ===== SIDEBAR ===== -->
+        <aside id="sidebar" class="hidden">
+
+            <button id="btn-compose-main">
+                <span class="material-icons-round">edit</span>
+                Compose
+            </button>
+
+            <!-- Folders -->
+            <div class="sidebar-section-label">Folders</div>
+            <div class="sidebar-item active" data-folder="inbox" id="folder-inbox">
+                <span class="material-icons-round">inbox</span>
+                Inbox
+                <span class="sidebar-badge" id="badge-inbox"></span>
             </div>
-            <div class="md:w-3/4 bg-white p-4 rounded-lg shadow-md">
-                <div id="email-inbox">
-                    <h3 class="font-bold text-lg mb-4">Inbox: <span id="current-mailbox-title">Select a mailbox</span></h3>
-                    <div id="emails-container" class="space-y-2"></div>
+            <div class="sidebar-item" data-folder="starred" id="folder-starred">
+                <span class="material-icons-round">star</span>
+                Starred
+                <span class="sidebar-badge" id="badge-starred"></span>
+            </div>
+            <div class="sidebar-item" data-folder="sent" id="folder-sent">
+                <span class="material-icons-round">send</span>
+                Sent
+                <span class="sidebar-badge" id="badge-sent"></span>
+            </div>
+            <div class="sidebar-item" data-folder="trash" id="folder-trash">
+                <span class="material-icons-round">delete</span>
+                Trash
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Labels -->
+            <div class="sidebar-section-label">Labels</div>
+            <div id="labels-sidebar-list"></div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Mailboxes -->
+            <div class="sidebar-section-label">Mailboxes</div>
+            <div id="mailbox-list"></div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Nav links -->
+            <div class="sidebar-item" id="nav-settings-link">
+                <span class="material-icons-round">settings</span>
+                Settings
+            </div>
+            <div class="sidebar-item hidden" id="nav-admin-link">
+                <span class="material-icons-round">admin_panel_settings</span>
+                Admin
+            </div>
+            <div class="sidebar-item" id="nav-logout-link" style="color: var(--danger)">
+                <span class="material-icons-round">logout</span>
+                Logout
+            </div>
+        </aside>
+
+        <!-- ===== MAIN PANEL ===== -->
+        <main id="main-panel">
+
+            <!-- LOGIN VIEW -->
+            <div id="view-login" class="flex-1 hidden" style="display:none; flex:1; align-items:center; justify-content:center; background:var(--bg-page);">
+                <div class="login-card">
+                    <div class="login-logo">H</div>
+                    <h1>Welcome to HaxMail</h1>
+                    <p>Sign in to access your mailboxes</p>
+                    <button id="btn-login">
+                        <span class="material-icons-round">lock_open</span>
+                        Sign in with OIDC
+                    </button>
                 </div>
-                <!-- Email Detail View -->
-                <div id="email-detail" class="hidden">
-                    <button id="btn-back-to-inbox" class="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Inbox</button>
-                    <div id="email-detail-header" class="mb-4 border-b pb-3"></div>
-                    <div id="email-detail-toggle" class="mb-2 flex space-x-2">
-                        <button id="btn-view-text" class="px-3 py-1 rounded bg-blue-600 text-white text-sm">Text</button>
-                        <button id="btn-view-html" class="px-3 py-1 rounded bg-gray-300 text-sm">HTML</button>
+            </div>
+
+            <!-- INBOX VIEW -->
+            <div id="view-inbox" class="hidden" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
+
+                <div id="inbox-toolbar">
+                    <span id="inbox-title">Inbox</span>
+                    <span id="inbox-count-badge"></span>
+                    <select id="sort-select" title="Sort emails">
+                        <option value="timestamp-desc">Newest first</option>
+                        <option value="timestamp-asc">Oldest first</option>
+                        <option value="from-asc">Sender A→Z</option>
+                        <option value="subject-asc">Subject A→Z</option>
+                    </select>
+                </div>
+
+                <div id="refresh-bar" class="hidden">
+                    <span class="material-icons-round" style="font-size:18px">refresh</span>
+                    New emails arrived — click to reload
+                </div>
+
+                <div style="flex:1; overflow-y:auto;">
+                    <ul id="emails-list" role="list" aria-label="Email list"></ul>
+                    <div id="empty-state" class="hidden">
+                        <div class="empty-icon">
+                            <span class="material-icons-round" style="font-size:64px;color:var(--text-muted)">inbox</span>
+                        </div>
+                        <p style="font-weight:600;color:var(--text-secondary)">All clear!</p>
+                        <p>No emails here.</p>
                     </div>
-                    <div id="email-detail-text" class="text-gray-700 text-sm whitespace-pre-wrap"></div>
-                    <div id="email-detail-html" class="hidden"></div>
-                </div>
-                <div id="email-compose" class="hidden">
-                    <h3 class="font-bold text-lg mb-4">Compose Email</h3>
-                    <form id="compose-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold">From</label>
-                            <select id="compose-from" class="w-full border p-2 rounded" required></select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold">To</label>
-                            <input type="email" id="compose-to" class="w-full border p-2 rounded" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold">Subject</label>
-                            <input type="text" id="compose-subject" class="w-full border p-2 rounded" maxlength="255" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold">Body</label>
-                            <textarea id="compose-body" class="w-full border p-2 rounded h-32" required></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send</button>
-                            <button type="button" id="btn-cancel-compose" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
-                        </div>
-                    </form>
                 </div>
             </div>
-        </div>
 
-        <!-- SETTINGS VIEW -->
-        <div id="view-settings" class="hidden max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold mb-4">Settings</h2>
-            <div class="bg-blue-50 p-4 rounded border border-blue-200 mb-6">
-                <h3 class="font-bold text-blue-800">Gmail App Integration</h3>
-                <p class="text-sm text-blue-700 mb-2">Use these credentials to set up "Send mail as" in Gmail.</p>
-                <button id="btn-generate-smtp" class="bg-blue-600 text-white px-4 py-2 rounded text-sm mb-4">Generate SMTP Credentials</button>
-                <div id="smtp-credentials" class="hidden bg-gray-900 text-green-400 p-4 rounded font-mono text-sm break-all whitespace-pre-wrap"></div>
+            <!-- EMAIL DETAIL VIEW -->
+            <div id="view-detail" class="hidden" style="display:none;">
+                <button id="detail-back-btn">
+                    <span class="material-icons-round">arrow_back</span>
+                    Back to <span id="detail-back-label">Inbox</span>
+                </button>
+
+                <div id="detail-subject"></div>
+
+                <div id="detail-labels-row"></div>
+
+                <div id="detail-action-bar">
+                    <button class="detail-action-btn" id="btn-reply">
+                        <span class="material-icons-round">reply</span> Reply
+                    </button>
+                    <button class="detail-action-btn" id="btn-forward">
+                        <span class="material-icons-round">forward</span> Forward
+                    </button>
+                    <button class="detail-action-btn" id="btn-star-detail">
+                        <span class="material-icons-round" id="star-detail-icon">star_border</span> <span id="star-detail-label">Star</span>
+                    </button>
+                    <button class="detail-action-btn danger" id="btn-delete">
+                        <span class="material-icons-round">delete</span> Move to Trash
+                    </button>
+                </div>
+
+                <div id="detail-attachments" class="hidden"></div>
+
+                <div id="detail-meta"></div>
+
+                <div id="detail-body-toggle">
+                    <button class="toggle-btn active" id="btn-view-text">Plain Text</button>
+                    <button class="toggle-btn" id="btn-view-html">HTML</button>
+                </div>
+
+                <div id="detail-text"></div>
+                <div id="detail-html"></div>
             </div>
-        </div>
 
-        <!-- ADMIN VIEW -->
-        <div id="view-admin" class="hidden max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold mb-4">Super Admin Dashboard</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="font-bold mb-2">Create Mailbox</h3>
-                    <div class="flex space-x-2">
-                        <input type="email" id="admin-new-mailbox" placeholder="alias@domain.com" class="border p-2 rounded flex-1">
-                        <button id="btn-admin-create-mbx" class="bg-green-600 text-white px-4 py-2 rounded">Create</button>
+            <!-- SETTINGS VIEW -->
+            <div id="view-settings" class="hidden" style="display:none;">
+                <h2 style="font-size:1.5rem;font-weight:700;margin:0 0 24px;color:var(--text-primary)">Settings</h2>
+
+                <!-- Gmail SMTP -->
+                <div class="settings-card">
+                    <h3>Gmail App Integration (Send Mail As)</h3>
+                    <p>Generate SMTP credentials to use in Gmail's "Send mail as" feature.</p>
+                    <button class="settings-btn primary" id="btn-generate-smtp">
+                        <span class="material-icons-round" style="font-size:18px">key</span>
+                        Generate SMTP Credentials
+                    </button>
+                    <div id="smtp-credentials" class="smtp-creds-box hidden"></div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="settings-card">
+                    <h3>Email Signatures</h3>
+                    <p>Manage signatures to auto-append to your emails.</p>
+                    <div id="signatures-list"></div>
+                    <div>
+                        <textarea id="signature-textarea" placeholder="Type your signature here..."></textarea>
+                        <div class="settings-row">
+                            <input class="settings-input" id="signature-name-input" placeholder="Signature name (e.g. Work)">
+                            <button class="settings-btn primary" id="btn-save-signature">Save</button>
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <h3 class="font-bold mb-2">Assign User</h3>
-                    <form id="admin-assign-form" class="space-y-2">
-                        <input type="text" id="assign-user-id" placeholder="User ID" class="border p-2 rounded w-full" required>
-                        <input type="email" id="assign-address" placeholder="Mailbox Address" class="border p-2 rounded w-full" required>
-                        <div class="flex space-x-4">
-                            <label><input type="checkbox" id="assign-read"> Read</label>
-                            <label><input type="checkbox" id="assign-write"> Write (CRUD)</label>
+
+                <!-- Display Density -->
+                <div class="settings-card">
+                    <h3>Email Density</h3>
+                    <p>Control how much space each email takes in the list.</p>
+                    <div class="density-options">
+                        <div class="density-opt" data-density="compact" id="density-compact">
+                            <span class="material-icons-round" style="font-size:18px">density_small</span><br>Compact
                         </div>
-                        <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded w-full">Assign</button>
-                    </form>
+                        <div class="density-opt active" data-density="comfortable" id="density-comfortable">
+                            <span class="material-icons-round" style="font-size:18px">density_medium</span><br>Comfortable
+                        </div>
+                        <div class="density-opt" data-density="cozy" id="density-cozy">
+                            <span class="material-icons-round" style="font-size:18px">density_large</span><br>Cozy
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
 
-    <script src="aws-intercept.js"></script>
-    <script src="app.js"></script>
+            <!-- ADMIN VIEW -->
+            <div id="view-admin" class="hidden" style="display:none;">
+                <h2 style="font-size:1.5rem;font-weight:700;margin:0 0 24px;color:var(--text-primary)">Super Admin Dashboard</h2>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px">
+                    <div class="settings-card" style="margin:0">
+                        <h3>Create Mailbox</h3>
+                        <p>Add a new mailbox address.</p>
+                        <div class="settings-row">
+                            <input type="email" id="admin-new-mailbox" placeholder="alias@domain.com" class="settings-input">
+                            <button class="settings-btn primary" id="btn-admin-create-mbx">Create</button>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin:0">
+                        <h3>Assign User to Mailbox</h3>
+                        <p>Grant a user access to a mailbox.</p>
+                        <form id="admin-assign-form" style="display:flex;flex-direction:column;gap:10px">
+                            <input type="text" id="assign-user-id" placeholder="User ID" class="settings-input" required>
+                            <input type="email" id="assign-address" placeholder="Mailbox address" class="settings-input" required>
+                            <div style="display:flex;gap:16px;font-size:0.875rem;color:var(--text-secondary)">
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                    <input type="checkbox" id="assign-read"> Read
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                    <input type="checkbox" id="assign-write"> Write (CRUD)
+                                </label>
+                            </div>
+                            <button type="submit" class="settings-btn primary">Assign User</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</div><!-- end #app-shell -->
+
+<!-- ===== COMPOSE OVERLAY ===== -->
+<div id="compose-overlay" class="hidden">
+    <div id="compose-header">
+        <span id="compose-title">New Message</span>
+        <button class="compose-header-btn" id="btn-compose-fullscreen" title="Fullscreen (F)">
+            <span class="material-icons-round" id="fullscreen-icon">open_in_full</span>
+        </button>
+        <button class="compose-header-btn" id="btn-compose-close" title="Close">
+            <span class="material-icons-round">close</span>
+        </button>
+    </div>
+    <div id="compose-fields">
+        <div class="compose-field">
+            <label for="compose-from">From</label>
+            <select id="compose-from"></select>
+        </div>
+        <div class="compose-field">
+            <label for="compose-to">To</label>
+            <input type="email" id="compose-to" placeholder="Recipients" autocomplete="off">
+        </div>
+        <div class="compose-field">
+            <label for="compose-subject">Subject</label>
+            <input type="text" id="compose-subject" placeholder="Subject" maxlength="255" autocomplete="off">
+        </div>
+    </div>
+    <div id="compose-rich-toolbar">
+        <button class="rich-btn" id="rb-bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+        <button class="rich-btn" id="rb-italic" title="Italic (Ctrl+I)"><em>I</em></button>
+        <button class="rich-btn" id="rb-underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <div class="rich-divider"></div>
+        <button class="rich-btn" id="rb-ul" title="Bullet list"><span class="material-icons-round">format_list_bulleted</span></button>
+        <button class="rich-btn" id="rb-ol" title="Numbered list"><span class="material-icons-round">format_list_numbered</span></button>
+        <div class="rich-divider"></div>
+        <button class="rich-btn" id="rb-link" title="Insert link"><span class="material-icons-round">link</span></button>
+        <button class="rich-btn" id="rb-quote" title="Blockquote"><span class="material-icons-round">format_quote</span></button>
+        <div class="rich-divider"></div>
+        <button class="rich-btn" id="rb-clear" title="Clear formatting"><span class="material-icons-round">format_clear</span></button>
+        <div class="rich-divider"></div>
+        <button class="rich-btn" id="rb-preview" title="Preview rendered HTML"><span class="material-icons-round">visibility</span></button>
+    </div>
+    <div id="compose-body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Email body"></div>
+    <!-- HTML preview pane — shown when preview mode is active -->
+    <div id="compose-preview" class="hidden" style="flex:1;overflow-y:auto;padding:12px 16px;border:none;"></div>
+    <!-- Attachment drop zone + chips -->
+    <div id="compose-attachments" style="padding:0 16px;display:flex;flex-wrap:wrap;gap:6px;min-height:0;"></div>
+    <div id="compose-dropzone" class="hidden" style="
+        margin:0 16px 8px;
+        border:2px dashed var(--accent);
+        border-radius:var(--radius-md);
+        padding:16px;
+        text-align:center;
+        color:var(--accent);
+        font-size:0.875rem;
+        font-weight:500;
+        transition:background 0.15s;
+    ">
+        <span class="material-icons-round" style="font-size:28px;display:block;margin-bottom:4px">upload_file</span>
+        Drop files here or click to attach (max 5 MB each)
+        <input type="file" id="attach-file-input" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+    </div>
+    <div id="compose-footer">
+        <button id="btn-send-compose">
+            <span class="material-icons-round">send</span>
+            Send
+        </button>
+        <button class="toolbar-btn" id="btn-attach" title="Attach files" style="border:none;background:none;">
+            <span class="material-icons-round" style="font-size:20px;color:var(--text-muted)">attach_file</span>
+        </button>
+        <div style="flex:1"></div>
+        <button class="detail-action-btn" id="btn-compose-discard" title="Discard">
+            <span class="material-icons-round">delete_outline</span>
+        </button>
+    </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toast-container"></div>
+
+<!-- ===== SHORTCUTS MODAL ===== -->
+<div id="modal-shortcuts" class="modal-backdrop hidden">
+    <div class="modal-box">
+        <h2>⌨️ Keyboard Shortcuts</h2>
+        <table class="shortcuts-table">
+            <tr><td><kbd>j</kbd></td><td>Select next email</td></tr>
+            <tr><td><kbd>k</kbd></td><td>Select previous email</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Open selected email</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Back to inbox / Close</td></tr>
+            <tr><td><kbd>c</kbd></td><td>Compose new email</td></tr>
+            <tr><td><kbd>r</kbd></td><td>Refresh inbox</td></tr>
+            <tr><td><kbd>s</kbd></td><td>Star / unstar selected</td></tr>
+            <tr><td><kbd>#</kbd></td><td>Move selected to trash</td></tr>
+            <tr><td><kbd>d</kbd></td><td>Toggle dark mode</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show this help panel</td></tr>
+        </table>
+        <div style="margin-top:20px;text-align:right">
+            <button class="settings-btn primary" id="btn-close-shortcuts">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== LABEL PICKER MODAL ===== -->
+<div id="modal-label-picker" class="modal-backdrop hidden">
+    <div class="modal-box">
+        <h2>🏷️ Add Label</h2>
+        <div class="label-picker-grid" id="label-picker-grid"></div>
+        <div style="text-align:right">
+            <button class="settings-btn" id="btn-close-label-picker">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="aws-intercept.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
