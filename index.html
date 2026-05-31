@@ -7,7 +7,7 @@
     <meta name="description" content="HaxMail — Fast, secure webmail for haxnation.org domains">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
-            integrity="sha384-X2xRn1UrV5E+QPgfnNmFJ5OA/MKtpFDcPSHmNOQ5PwxNKRUstKMmterlT6PLTj1"
+            integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
             crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -139,6 +139,9 @@
             .email-row.read {
                 @apply bg-bg-row-read;
             }
+            .email-row.selected-kb {
+                @apply border-l-4 border-l-accent bg-bg-row-hover shadow-[inset_1px_0_0_var(--tw-colors-border-DEFAULT),inset_-1px_0_0_var(--tw-colors-border-DEFAULT),0_1px_4px_rgba(0,0,0,0.08)];
+            }
             .row-controls {
                 @apply flex items-center gap-1 shrink-0 text-text-muted;
             }
@@ -149,21 +152,21 @@
                 @apply text-[#f4b400];
             }
             .row-from {
-                @apply w-32 md:w-[180px] font-bold text-text-unread whitespace-nowrap overflow-hidden text-ellipsis text-sm hidden sm:block;
+                @apply w-32 md:w-[180px] font-bold text-text-primary whitespace-nowrap overflow-hidden text-ellipsis text-sm hidden sm:block;
             }
             .email-row.read .row-from {
-                @apply font-medium text-text-read;
+                @apply font-medium text-text-secondary;
             }
             .row-content {
                 @apply flex-1 flex items-center gap-2 overflow-hidden text-sm;
             }
-            .row-subject {
-                @apply font-semibold text-text-unread whitespace-nowrap overflow-hidden text-ellipsis;
+            .email-row-subject {
+                @apply font-semibold text-text-primary whitespace-nowrap overflow-hidden text-ellipsis;
             }
-            .email-row.read .row-subject {
+            .email-row.read .email-row-subject {
                 @apply font-normal text-text-secondary;
             }
-            .row-snippet {
+            .email-row-preview {
                 @apply text-text-muted whitespace-nowrap overflow-hidden text-ellipsis hidden md:block;
             }
             .row-labels {
@@ -176,16 +179,109 @@
                 @apply inline-flex items-center gap-1 px-2 py-0.5 bg-bg-hover border border-border rounded-xl text-xs text-text-secondary ml-2 whitespace-nowrap;
             }
             .row-time {
-                @apply w-16 md:w-20 text-right text-xs font-semibold text-text-unread shrink-0;
+                @apply w-16 md:w-20 text-right text-xs font-semibold text-text-primary shrink-0;
             }
             .email-row.read .row-time {
                 @apply font-medium text-text-muted;
+            }
+            .row-actions {
+                @apply hidden items-center gap-1 shrink-0;
+            }
+            .email-row:hover .row-actions {
+                @apply flex;
+            }
+            .email-row:hover .row-time {
+                @apply hidden;
+            }
+            .row-action-btn {
+                @apply flex items-center justify-center w-7 h-7 rounded-full bg-transparent border-none text-text-muted hover:bg-bg-hover hover:text-text-primary cursor-pointer transition-colors;
+            }
+            .meta-row {
+                @apply flex text-sm mb-1 text-text-secondary;
+            }
+            .meta-label {
+                @apply w-[60px] font-semibold text-text-muted shrink-0;
+            }
+            .label-chip-mini {
+                @apply text-[0.6875rem] px-1.5 py-0.5 rounded text-white whitespace-nowrap inline-flex items-center;
+            }
+            .star-btn {
+                @apply bg-transparent border-none p-0 flex items-center justify-center cursor-pointer text-text-muted hover:text-text-secondary;
+            }
+            .star-btn.starred {
+                @apply text-[#f4b400];
+            }
+            .thread-group-header {
+                @apply flex items-center px-4 py-2 bg-bg-row-unread border-b border-border cursor-pointer transition-colors hover:bg-bg-row-hover;
+            }
+            .thread-count-badge {
+                @apply inline-flex items-center justify-center min-w-[20px] h-5 bg-border text-text-secondary text-[0.6875rem] font-bold px-1.5 rounded-full;
+            }
+            .thread-child {
+                @apply pl-10 border-l-[3px] border-l-border;
+            }
+            .sidebar-item {
+                @apply flex items-center gap-3 px-4 py-1.5 mr-4 rounded-r-full cursor-pointer text-sm font-medium text-text-secondary hover:bg-bg-hover transition-colors select-none;
+            }
+            .sidebar-item.active {
+                @apply bg-bg-active text-text-active font-bold;
+            }
+            .sidebar-badge {
+                @apply ml-auto text-xs font-bold text-text-primary bg-transparent;
+            }
+            .sidebar-item.active .sidebar-badge {
+                @apply text-text-active;
+            }
+            .toast {
+                @apply bg-[#323232] text-white px-5 py-3 rounded text-sm font-medium shadow-md transition-opacity duration-300;
+            }
+            .toast.error {
+                @apply bg-danger;
+            }
+            .toast.success {
+                @apply bg-success;
+            }
+            .email-html-frame {
+                @apply w-full border-none h-[600px] bg-white;
+            }
+            .compose-signature {
+                @apply mt-4 pt-2 text-text-muted text-sm border-t border-border border-dashed;
+            }
+            .label-picker-item {
+                @apply flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer text-sm font-medium border border-border text-text-secondary hover:bg-bg-hover transition-colors;
+            }
+            .label-picker-item.selected {
+                @apply bg-bg-active text-text-active border-accent;
+            }
+            .sidebar-label-dot {
+                @apply w-3 h-3 rounded-full mr-2 shrink-0;
+            }
+            .signature-item {
+                @apply flex flex-col md:flex-row md:items-center gap-4 p-4 border border-border rounded bg-bg-card mb-4;
+            }
+            .sig-active-badge {
+                @apply bg-success text-white text-[0.6875rem] font-bold px-2 py-0.5 rounded uppercase tracking-wider;
+            }
+            .signature-content {
+                @apply flex-1 text-sm text-text-secondary whitespace-pre-wrap;
+            }
+            .settings-btn {
+                @apply px-4 py-1.5 rounded font-medium text-sm cursor-pointer border border-border bg-transparent text-text-primary hover:bg-bg-hover transition-colors;
+            }
+            .settings-btn.primary {
+                @apply bg-accent hover:bg-accent-hover text-white border-transparent;
+            }
+            .settings-btn.danger {
+                @apply text-danger border-danger hover:bg-danger hover:text-white transition-colors;
             }
         }
     </style>
 
 </head>
 <body class="h-full m-0 p-0 font-sans bg-bg-page text-text-primary transition-colors duration-200">
+
+<!-- Anti-purge div for dynamic JS classes -->
+<div class="hidden email-row read selected-kb row-star starred star-btn row-from email-row-from row-content email-row-subject email-row-preview row-labels label-chip-mini attachment-chip row-time row-actions row-action-btn meta-row meta-label flex-col flex-1 items-center justify-center thread-group-header thread-count-badge thread-child sidebar-item active sidebar-badge toast error success email-html-frame compose-signature label-picker-item selected sidebar-label-dot signature-item sig-active-badge signature-content settings-btn primary danger"></div>
 
 <div id="app-shell" class="flex flex-col h-screen overflow-hidden">
 
