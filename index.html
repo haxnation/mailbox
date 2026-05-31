@@ -24,62 +24,33 @@
                     },
                     colors: {
                         bg: {
-                            page: '#f6f8fc',
-                            sidebar: '#ffffff',
-                            card: '#ffffff',
-                            hover: '#f1f3f4',
-                            active: '#d3e3fd',
-                            'row-unread': '#ffffff',
-                            'row-read': '#f2f6fc',
-                            'row-hover': '#e8f0fe',
+                            page: 'var(--c-bg-page)',
+                            sidebar: 'var(--c-bg-sidebar)',
+                            card: 'var(--c-bg-card)',
+                            hover: 'var(--c-bg-hover)',
+                            active: 'var(--c-bg-active)',
+                            'row-unread': 'var(--c-bg-row-unread)',
+                            'row-read': 'var(--c-bg-row-read)',
+                            'row-hover': 'var(--c-bg-row-hover)',
                         },
                         text: {
-                            primary: '#202124',
-                            secondary: '#444746',
-                            muted: '#80868b',
-                            active: '#1a73e8',
+                            primary: 'var(--c-text-primary)',
+                            secondary: 'var(--c-text-secondary)',
+                            muted: 'var(--c-text-muted)',
+                            active: 'var(--c-text-active)',
                         },
                         border: {
-                            DEFAULT: '#e0e0e0',
-                            input: '#dadce0',
+                            DEFAULT: 'var(--c-border)',
+                            input: 'var(--c-border-input)',
                         },
                         accent: {
-                            DEFAULT: '#1a73e8',
-                            hover: '#1557b0',
-                            light: '#e8f0fe',
+                            DEFAULT: 'var(--c-accent)',
+                            hover: 'var(--c-accent-hover)',
+                            light: 'var(--c-accent-light)',
                         },
                         danger: '#d93025',
                         success: '#1e8e3e',
                         warning: '#e37400',
-                        
-                        // Dark mode overrides mapping
-                        dark: {
-                            bg: {
-                                page: '#111827',
-                                sidebar: '#1f2937',
-                                card: '#1f2937',
-                                hover: '#2d3748',
-                                active: '#1e3a5f',
-                                'row-unread': '#1f2937',
-                                'row-read': '#17202e',
-                                'row-hover': '#263347',
-                            },
-                            text: {
-                                primary: '#e8eaed',
-                                secondary: '#9aa0a6',
-                                muted: '#6b7280',
-                                active: '#8ab4f8',
-                            },
-                            border: {
-                                DEFAULT: '#374151',
-                                input: '#4b5563',
-                            },
-                            accent: {
-                                DEFAULT: '#8ab4f8',
-                                hover: '#6c9dde',
-                                light: '#1e3a5f',
-                            }
-                        }
                     },
                     boxShadow: {
                         sm: '0 1px 2px rgba(0,0,0,.12)',
@@ -92,6 +63,46 @@
         }
     </script>
     <style type="text/tailwindcss">
+        @layer base {
+            :root {
+                --c-bg-page: #f6f8fc;
+                --c-bg-sidebar: #ffffff;
+                --c-bg-card: #ffffff;
+                --c-bg-hover: #f1f3f4;
+                --c-bg-active: #d3e3fd;
+                --c-bg-row-unread: #ffffff;
+                --c-bg-row-read: #f2f6fc;
+                --c-bg-row-hover: #e8f0fe;
+                --c-text-primary: #202124;
+                --c-text-secondary: #444746;
+                --c-text-muted: #80868b;
+                --c-text-active: #1a73e8;
+                --c-border: #e0e0e0;
+                --c-border-input: #dadce0;
+                --c-accent: #1a73e8;
+                --c-accent-hover: #1557b0;
+                --c-accent-light: #e8f0fe;
+            }
+            .dark {
+                --c-bg-page: #111827;
+                --c-bg-sidebar: #1f2937;
+                --c-bg-card: #1f2937;
+                --c-bg-hover: #2d3748;
+                --c-bg-active: #1e3a5f;
+                --c-bg-row-unread: #1f2937;
+                --c-bg-row-read: #17202e;
+                --c-bg-row-hover: #263347;
+                --c-text-primary: #e8eaed;
+                --c-text-secondary: #9aa0a6;
+                --c-text-muted: #6b7280;
+                --c-text-active: #8ab4f8;
+                --c-border: #374151;
+                --c-border-input: #4b5563;
+                --c-accent: #8ab4f8;
+                --c-accent-hover: #6c9dde;
+                --c-accent-light: #1e3a5f;
+            }
+        }
         @layer utilities {
             .hidden { display: none !important; }
             .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -286,7 +297,7 @@
 <div id="app-shell" class="flex flex-col h-screen overflow-hidden">
 
     <!-- ===== TOP NAV ===== -->
-    <nav id="top-nav" class="hidden items-center gap-2 p-2 sm:px-4 bg-bg-nav border-b border-border shrink-0 z-50 shadow-sm w-full">
+    <nav id="top-nav" class="hidden flex items-center gap-2 p-2 sm:px-4 bg-bg-sidebar border-b border-border shrink-0 z-50 shadow-sm w-full">
         <!-- Mobile Sidebar Toggle -->
         <button id="btn-mobile-menu" class="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" title="Menu">
             <span class="material-icons-round">menu</span>
