@@ -1,0 +1,8 @@
+{
+  "name": "form-handler",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.879.0"
+  }
+}

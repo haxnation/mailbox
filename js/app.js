@@ -1,0 +1,378 @@
+// =============================================================
+// AUTO-REFRESH + BROWSER NOTIFICATIONS (Phase 4)
+// =============================================================
+function startAutoRefresh() {
+    stopAutoRefresh();
+    state.autoRefreshTimer = setInterval(checkNewEmails, 60_000);
+}
+
+function stopAutoRefresh() {
+    if (state.autoRefreshTimer) {
+        clearInterval(state.autoRefreshTimer);
+        state.autoRefreshTimer = null;
+    }
+}
+
+async function checkNewEmails() {
+    if (!state.currentMailbox || state.currentFolder !== 'inbox') return;
+    try {
+        const emails = await apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}?folder=inbox`);
+        const newIds = new Set(emails.map(e => emailId(e)));
+
+        // Find genuinely new emails
+        const fresh = emails.filter(e => !state.lastEmailIds.has(emailId(e)));
+
+        if (fresh.length > 0) {
+            // Show refresh bar
+            const bar = document.getElementById('refresh-bar');
+            bar.textContent = `${fresh.length} new email${fresh.length > 1 ? 's' : ''} — click to reload`;
+            bar.classList.remove('hidden');
+
+            // Browser notification
+            if (Notification.permission === 'granted') {
+                fresh.forEach(e => {
+                    new Notification(`New email from ${formatSenderName(e.from)}`, {
+                        body:    e.subject || '(no subject)',
+                        icon:    '/favicon.ico',
+                        tag:     emailId(e),
+                        silent:  false
+                    });
+                });
+            }
+
+            state.lastEmailIds = newIds;
+        }
+    } catch {}
+}
+
+async function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+}
+
+
+// =============================================================
+// WIRING UP DOM EVENTS
+// =============================================================
+function initEvents() {
+
+    // ---- Compose buttons ----
+    document.getElementById('btn-compose-main').onclick  = () => openCompose(true);
+    document.getElementById('btn-compose-close').onclick  = closeCompose;
+    document.getElementById('btn-compose-discard').onclick = closeCompose;
+    document.getElementById('btn-send-compose').onclick   = sendCompose;
+
+    document.getElementById('btn-compose-fullscreen').onclick = () => {
+        const overlay = document.getElementById('compose-overlay');
+        const isFs    = overlay.classList.toggle('fullscreen');
+        document.getElementById('fullscreen-icon').textContent = isFs ? 'close_fullscreen' : 'open_in_full';
+    };
+
+    // ---- Detail view buttons ----
+    document.getElementById('detail-back-btn').onclick = () => {
+        state.openEmail = null;
+        showView('inbox');
+    };
+    document.getElementById('btn-view-text').onclick = () => showBodyView('text');
+    document.getElementById('btn-view-html').onclick = () => showBodyView('html');
+    document.getElementById('btn-reply').onclick   = () => state.openEmail && replyToEmail(state.openEmail);
+    document.getElementById('btn-forward').onclick = () => state.openEmail && forwardEmail(state.openEmail);
+    document.getElementById('btn-delete').onclick  = async () => {
+        if (!state.openEmail) return;
+        const id = emailId(state.openEmail);
+        await moveToTrash(state.currentMailbox, state.openEmail.timestamp, id);
+    };
+    document.getElementById('btn-star-detail').onclick = () => {
+        if (!state.openEmail) return;
+        const id = emailId(state.openEmail);
+        const nowStarred = toggleStar(id);
+        document.getElementById('star-detail-icon').textContent = nowStarred ? 'star' : 'star_border';
+        const lbl = document.getElementById('star-detail-label');
+        if (lbl) lbl.textContent = nowStarred ? 'Unstar' : 'Star';
+        updateBadges();
+        renderEmailList();
+    };
+
+    // ---- Folder navigation ----
+    document.querySelectorAll('.sidebar-item[data-folder]').forEach(el => {
+        el.onclick = () => {
+            const folder = el.dataset.folder;
+            state.currentFolder = folder;
+            state.searchQuery   = '';
+            document.getElementById('global-search').value = '';
+
+            const titles = { inbox: 'Inbox', starred: 'Starred', sent: 'Sent', trash: 'Trash' };
+            document.getElementById('inbox-title').textContent = titles[folder] || folder;
+
+            document.querySelectorAll('.sidebar-item[data-folder]').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+
+            showView('inbox');
+            loadEmails();
+        };
+    });
+
+    // ---- Nav links ----
+    document.getElementById('nav-settings-link').onclick = () => {
+        renderSignaturesList();
+        showView('settings');
+    };
+    document.getElementById('nav-admin-link').onclick = () => showView('admin');
+    document.getElementById('nav-logout-link').onclick = async () => {
+        try { await apiCall('/auth/logout', { method: 'POST' }); } catch {}
+        state.user = null;
+        window.location.reload();
+    };
+
+    // ---- Search ----
+    document.getElementById('global-search').addEventListener('input', e => {
+        state.searchQuery = e.target.value;
+        renderEmailList();
+    });
+
+    // ---- Sort ----
+    document.getElementById('sort-select').addEventListener('change', e => {
+        state.sortKey = e.target.value;
+        renderEmailList();
+    });
+
+    // ---- Select All & Trash Selected ----
+    document.getElementById('select-all-checkbox').addEventListener('change', e => {
+        const checked = e.target.checked;
+        document.querySelectorAll('.email-select-cb').forEach(cb => {
+            cb.checked = checked;
+        });
+        toggleTrashSelectedBtn();
+    });
+
+    document.getElementById('trash-selected-btn').addEventListener('click', async () => {
+        const checked = document.querySelectorAll('.email-select-cb:checked');
+        if (checked.length === 0) return;
+        const ids = Array.from(checked).map(cb => cb.dataset.id);
+        const toDelete = state.currentEmails.filter(e => ids.includes(emailId(e)));
+        try {
+            await apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}/bulk-delete`, {
+                method: 'POST',
+                body: JSON.stringify({ timestamps: toDelete.map(e => e.timestamp) })
+            });
+            state.currentEmails = state.currentEmails.filter(e => !ids.includes(emailId(e)));
+            renderEmailList();
+            updateBadges();
+            showToast('Trash', `Moved ${ids.length} emails to trash`);
+        } catch (err) {
+            showToast('Error', 'Failed to move some emails to trash', true);
+        }
+    });
+
+    // ---- Refresh ----
+    document.getElementById('btn-refresh-nav').onclick = () => {
+        loadEmails();
+        showToast('Refreshed', 'default', 1500);
+    };
+    document.getElementById('refresh-bar').onclick = () => {
+        document.getElementById('refresh-bar').classList.add('hidden');
+        loadEmails();
+    };
+
+    // ---- Dark mode ----
+    document.getElementById('btn-dark-toggle').onclick = toggleDarkMode;
+
+    // ---- Mobile Menu ----
+    const btnMobileMenu = document.getElementById('btn-mobile-menu');
+    const sidebar = document.getElementById('sidebar');
+    if (btnMobileMenu && sidebar) {
+        btnMobileMenu.onclick = () => {
+            sidebar.classList.toggle('hidden');
+        };
+        document.getElementById('content-area').addEventListener('click', (e) => {
+            if (window.innerWidth < 768 && !sidebar.classList.contains('hidden')) {
+                if (!sidebar.contains(e.target) && !btnMobileMenu.contains(e.target)) {
+                    sidebar.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // ---- Shortcuts ----
+    document.getElementById('btn-shortcuts-help').onclick = () =>
+        document.getElementById('modal-shortcuts').classList.remove('hidden');
+    document.getElementById('btn-close-shortcuts').onclick = () =>
+        document.getElementById('modal-shortcuts').classList.add('hidden');
+    document.getElementById('modal-shortcuts').addEventListener('click', e => {
+        if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+    });
+
+    // ---- Label picker ----
+    document.getElementById('btn-close-label-picker').onclick = () =>
+        document.getElementById('modal-label-picker').classList.add('hidden');
+    document.getElementById('modal-label-picker').addEventListener('click', e => {
+        if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+    });
+
+    // ---- Login ----
+    document.getElementById('btn-login').onclick = () => {
+        window.location.href = `${API_URL}/auth/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    };
+
+    // ---- Settings ----
+    document.getElementById('btn-generate-smtp').onclick = async () => {
+        try {
+            const creds = await apiCall('/smtp-credentials', { method: 'POST' });
+            const box   = document.getElementById('smtp-credentials');
+            box.classList.remove('hidden');
+            box.textContent = [
+                `SMTP Server:  ${creds.smtpServer}`,
+                `Port:         ${creds.port}`,
+                `Username:     ${creds.smtpUsername}`,
+                `Password:     ${creds.smtpPassword}`
+            ].join('\n');
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    document.getElementById('btn-save-signature').onclick = () => {
+        const name    = document.getElementById('signature-name-input').value.trim();
+        const content = document.getElementById('signature-textarea').value.trim();
+        if (!name || !content) { showToast('Enter both a name and content.', 'warning'); return; }
+        const sigs = getSignatures();
+        sigs.push({ id: `sig_${Date.now()}`, name, content });
+        saveSignatures(sigs);
+        document.getElementById('signature-name-input').value = '';
+        document.getElementById('signature-textarea').value   = '';
+        renderSignaturesList();
+        showToast('Signature saved.', 'success');
+    };
+
+    // Density
+    document.querySelectorAll('.density-opt').forEach(el => {
+        el.onclick = () => applyDensity(el.dataset.density);
+    });
+
+    // ---- Attachment button + file input ----
+    const attachBtn   = document.getElementById('btn-attach');
+    const fileInput   = document.getElementById('attach-file-input');
+    const dropzone    = document.getElementById('compose-dropzone');
+
+    if (attachBtn) {
+        attachBtn.onclick = () => {
+            if (dropzone) dropzone.classList.toggle('hidden');
+            if (fileInput) fileInput.click();
+        };
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', e => {
+            handleFileSelection(e.target.files);
+            e.target.value = '';
+        });
+    }
+
+    // Drag-and-drop onto compose overlay
+    const composeOverlay = document.getElementById('compose-overlay');
+    if (composeOverlay) {
+        composeOverlay.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (dropzone) dropzone.classList.remove('hidden');
+            dropzone && (dropzone.style.background = 'var(--accent-light)');
+        });
+        composeOverlay.addEventListener('dragleave', () => {
+            dropzone && (dropzone.style.background = '');
+        });
+        composeOverlay.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone && (dropzone.style.background = '');
+            if (e.dataTransfer?.files?.length) {
+                handleFileSelection(e.dataTransfer.files);
+            }
+        });
+    }
+
+    // ---- Admin ----
+    document.getElementById('btn-admin-create-mbx').onclick = async () => {
+        const address = document.getElementById('admin-new-mailbox').value.trim();
+        if (!address) return;
+        try {
+            await apiCall('/admin/mailboxes', { method: 'POST', body: JSON.stringify({ address }) });
+            showToast('Mailbox created', 'success');
+            document.getElementById('admin-new-mailbox').value = '';
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    document.getElementById('admin-assign-form').onsubmit = async e => {
+        e.preventDefault();
+        const payload = {
+            userId:  document.getElementById('assign-user-id').value.trim(),
+            address: document.getElementById('assign-address').value.trim(),
+            canRead: document.getElementById('assign-read').checked,
+            canCrud: document.getElementById('assign-write').checked
+        };
+        try {
+            await apiCall('/admin/assignments', { method: 'POST', body: JSON.stringify(payload) });
+            showToast('User assigned successfully', 'success');
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    // ---- Rich toolbar ----
+    initRichToolbar();
+}
+
+
+// =============================================================
+// INITIALIZATION
+// =============================================================
+async function init() {
+    // Restore preferences (Phase 5)
+    const savedDark    = lsGet('wm_dark', false);
+    const savedDensity = lsGet('wm_density', 'comfortable');
+    applyDarkMode(savedDark);
+    applyDensity(savedDensity);
+
+    // Wire up all DOM events
+    initEvents();
+    initKeyboardShortcuts();
+
+    try {
+        const userData = await apiCall('/users/me');
+        state.user = userData;
+
+        // Show authed UI
+        document.getElementById('top-nav').classList.remove('hidden');
+        document.getElementById('sidebar').classList.remove('hidden');
+
+        // Avatar
+        const avatar = document.getElementById('user-avatar');
+        const initial = (userData.name || userData.email || 'U')[0].toUpperCase();
+        avatar.textContent = initial;
+        avatar.title       = userData.name || userData.email || '';
+
+        // Admin link
+        if (userData.userType === 'superadmin') {
+            document.getElementById('nav-admin-link').classList.remove('hidden');
+        }
+
+        // Request notification permission
+        requestNotificationPermission();
+
+        // Load mailboxes (auto-selects first one)
+        await loadMailboxes();
+
+    } catch {
+        state.user = null;
+        showView('login');
+        showView('login');
+    }
+}
+
+// Add spin animation for loading
+const spinStyle = document.createElement('style');
+spinStyle.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+document.head.appendChild(spinStyle);
+
+init();
+
