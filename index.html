@@ -412,6 +412,10 @@
             <div id="view-inbox" class="hidden flex flex-1 flex-col overflow-hidden">
 
                 <div id="inbox-toolbar" class="flex items-center gap-2 px-4 py-2 border-b border-border bg-bg-card shrink-0 sticky top-0 z-10">
+                    <input type="checkbox" id="select-all-checkbox" class="mr-2 cursor-pointer" title="Select all emails">
+                    <button id="trash-selected-btn" class="hidden items-center justify-center p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-danger cursor-pointer border-none bg-transparent" title="Move selected to Trash">
+                        <span class="material-icons-round text-[18px]">delete</span>
+                    </button>
                     <span id="inbox-title" class="text-lg font-semibold text-text-primary mr-1">Inbox</span>
                     <span id="inbox-count-badge" class="text-[0.8125rem] text-text-muted bg-bg-hover px-2 py-0.5 rounded-xl font-semibold"></span>
                     <select id="sort-select" class="ml-auto px-2 py-1 rounded border border-border bg-bg-card text-text-secondary text-sm outline-none cursor-pointer" title="Sort emails">

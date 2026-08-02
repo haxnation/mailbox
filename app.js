@@ -468,6 +468,36 @@ function renderEmailList() {
 
     // Restore keyboard selection highlight
     highlightSelectedRow();
+
+    // Clear selection state
+    const selectAllCb = document.getElementById('select-all-checkbox');
+    if (selectAllCb) {
+        selectAllCb.checked = false;
+        selectAllCb.indeterminate = false;
+    }
+    toggleTrashSelectedBtn();
+}
+
+function toggleTrashSelectedBtn() {
+    const btn = document.getElementById('trash-selected-btn');
+    if (!btn) return;
+    const checked = document.querySelectorAll('.email-select-cb:checked');
+    if (checked.length > 0) {
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+    } else {
+        btn.classList.add('hidden');
+        btn.classList.remove('flex');
+    }
+}
+
+function updateSelectAllState() {
+    const selectAllCb = document.getElementById('select-all-checkbox');
+    if (!selectAllCb) return;
+    const cbs = document.querySelectorAll('.email-select-cb');
+    const checked = document.querySelectorAll('.email-select-cb:checked');
+    selectAllCb.checked = cbs.length > 0 && checked.length === cbs.length;
+    selectAllCb.indeterminate = checked.length > 0 && checked.length < cbs.length;
 }
 
 function buildEmailRow(email, index) {
@@ -489,6 +519,9 @@ function buildEmailRow(email, index) {
     const previewText = (email.text || '').slice(0, 100).replace(/\s+/g, ' ');
 
     li.innerHTML = `
+        <div class="row-checkbox" style="padding-left: 16px; display: flex; align-items: center;">
+            <input type="checkbox" class="email-select-cb" data-id="${escHtml(id)}" style="cursor:pointer;" />
+        </div>
         <div class="row-star">
             <button class="star-btn${starred ? ' starred' : ''}" data-id="${escHtml(id)}" title="Star">
                 <span class="material-icons-round">${starred ? 'star' : 'star_border'}</span>
@@ -508,6 +541,16 @@ function buildEmailRow(email, index) {
                 <span class="material-icons-round">delete_outline</span>
             </button>
         </div>`;
+
+    // Checkbox click
+    const cb = li.querySelector('.email-select-cb');
+    if (cb) {
+        cb.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleTrashSelectedBtn();
+            updateSelectAllState();
+        });
+    }
 
     // Star click
     li.querySelector('.star-btn').addEventListener('click', e => {
@@ -1442,6 +1485,31 @@ function initEvents() {
     document.getElementById('sort-select').addEventListener('change', e => {
         state.sortKey = e.target.value;
         renderEmailList();
+    });
+
+    // ---- Select All & Trash Selected ----
+    document.getElementById('select-all-checkbox').addEventListener('change', e => {
+        const checked = e.target.checked;
+        document.querySelectorAll('.email-select-cb').forEach(cb => {
+            cb.checked = checked;
+        });
+        toggleTrashSelectedBtn();
+    });
+
+    document.getElementById('trash-selected-btn').addEventListener('click', async () => {
+        const checked = document.querySelectorAll('.email-select-cb:checked');
+        if (checked.length === 0) return;
+        const ids = Array.from(checked).map(cb => cb.dataset.id);
+        const toDelete = state.currentEmails.filter(e => ids.includes(emailId(e)));
+        try {
+            await Promise.all(toDelete.map(e => apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}/${encodeURIComponent(e.timestamp)}`, { method: 'DELETE' })));
+            state.currentEmails = state.currentEmails.filter(e => !ids.includes(emailId(e)));
+            renderEmailList();
+            updateBadges();
+            showToast('Trash', `Moved ${ids.length} emails to trash`);
+        } catch (err) {
+            showToast('Error', 'Failed to move some emails to trash', true);
+        }
     });
 
     // ---- Refresh ----
