@@ -1,12 +1,16 @@
 // =============================================================
 // API HELPER
 // =============================================================
+const API_URL = 'https://api.haxnation.org/mail/api';
+const AUTH_URL = 'https://api.haxnation.org/mail';
+
 async function apiCall(endpoint, options = {}) {
     if (!options.headers) options.headers = {};
     if (options.body) options.headers['Content-Type'] = 'application/json';
     options.credentials = 'include';
 
-    const res = await fetch(`${API_URL}${endpoint}`, options);
+    const baseUrl = endpoint.startsWith('/auth') ? AUTH_URL : API_URL;
+    const res = await fetch(`${baseUrl}${endpoint}`, options);
 
     if (res.status === 401 || res.status === 403) {
         state.user = null;

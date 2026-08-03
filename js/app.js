@@ -212,7 +212,7 @@ function initEvents() {
 
     // ---- Login ----
     document.getElementById('btn-login').onclick = () => {
-        window.location.href = `${API_URL}/auth/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        window.location.href = `${AUTH_URL}/auth/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     };
 
     // ---- Settings ----
