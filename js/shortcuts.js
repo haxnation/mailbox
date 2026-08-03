@@ -42,6 +42,9 @@ function initKeyboardShortcuts() {
 
         if (isInput) return;
 
+        // Ignore if modifier keys are pressed (e.g., Ctrl+C for copy)
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
         const emails = state.displayEmails;
 
         switch (e.key) {
