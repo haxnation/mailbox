@@ -1,0 +1,16 @@
+{
+  "name": "HaxMail",
+  "short_name": "HaxMail",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1a73e8",
+  "description": "A modern, fast, and secure email client.",
+  "icons": [
+    {
+      "src": "/icon.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

@@ -1,4 +1,61 @@
 // =============================================================
+// PWA INSTALL PROMPT
+// =============================================================
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Check if mobile (simple width check)
+    if (window.innerWidth <= 768) {
+        showPwaInstallToast();
+    }
+});
+
+function showPwaInstallToast() {
+    // Only show if it hasn't been dismissed recently (optional, skipping for now)
+    const toastHtml = `
+        <div id="pwa-toast" class="bg-bg-card border border-border shadow-lg rounded-xl p-4 flex items-center justify-between gap-4 max-w-sm w-full mx-auto relative pointer-events-auto">
+            <button onclick="document.getElementById('pwa-toast').remove()" class="absolute top-1 right-1 text-text-muted hover:text-text-primary p-1 bg-transparent border-none cursor-pointer">
+                <span class="material-icons-round text-[16px]">close</span>
+            </button>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a73e8] to-[#34a853] flex items-center justify-center text-white font-bold shrink-0">H</div>
+                <div>
+                    <h4 class="m-0 text-sm font-bold text-text-primary">Install HaxMail</h4>
+                    <p class="m-0 text-xs text-text-secondary">Add to Home Screen for faster access</p>
+                </div>
+            </div>
+            <button id="btn-install-pwa" class="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded font-medium text-sm border-none cursor-pointer whitespace-nowrap transition-colors">Install</button>
+        </div>
+    `;
+    
+    const container = document.getElementById('toast-container');
+    if (container) {
+        // Remove existing PWA toast if any
+        const existing = document.getElementById('pwa-toast');
+        if (existing) existing.remove();
+        
+        container.insertAdjacentHTML('beforeend', toastHtml);
+        
+        document.getElementById('btn-install-pwa').addEventListener('click', async () => {
+            const toast = document.getElementById('pwa-toast');
+            if (toast) toast.remove();
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                deferredPrompt = null;
+            }
+        });
+    }
+}
+
+// =============================================================
 // AUTO-REFRESH + BROWSER NOTIFICATIONS (Phase 4)
 // =============================================================
 function startAutoRefresh() {
@@ -16,7 +73,7 @@ function stopAutoRefresh() {
 async function checkNewEmails() {
     if (!state.currentMailbox || state.currentFolder !== 'inbox') return;
     try {
-        const emails = await apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}?folder=inbox`);
+        const emails = (await apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}?folder=inbox`)) || [];
         const newIds = new Set(emails.map(e => emailId(e)));
 
         // Find genuinely new emails
@@ -183,12 +240,12 @@ function initEvents() {
     const sidebar = document.getElementById('sidebar');
     if (btnMobileMenu && sidebar) {
         btnMobileMenu.onclick = () => {
-            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('mobile-hidden');
         };
         document.getElementById('content-area').addEventListener('click', (e) => {
-            if (window.innerWidth < 768 && !sidebar.classList.contains('hidden')) {
+            if (window.innerWidth < 768 && !sidebar.classList.contains('mobile-hidden')) {
                 if (!sidebar.contains(e.target) && !btnMobileMenu.contains(e.target)) {
-                    sidebar.classList.add('hidden');
+                    sidebar.classList.add('mobile-hidden');
                 }
             }
         });

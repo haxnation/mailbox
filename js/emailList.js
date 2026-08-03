@@ -50,60 +50,7 @@ function renderEmailList() {
     const threads = groupByThread(emails);
 
     threads.forEach(group => {
-        if (group.length === 1) {
-            listEl.appendChild(buildEmailRow(group[0], state.displayEmails.indexOf(group[0])));
-        } else {
-            // Thread group
-            const primary = group[0];
-            const threadWrap = document.createElement('li');
-            threadWrap.style.borderBottom = '1px solid var(--border)';
-
-            const headerEl = document.createElement('div');
-            headerEl.className = 'thread-group-header';
-
-            const unreadInThread = group.filter(e => !isRead(emailId(e))).length;
-            const starredInThread = group.some(e => isStarred(emailId(e)));
-
-            headerEl.innerHTML = `
-                <span class="material-icons-round" style="font-size:18px;color:var(--text-muted);transition:transform 0.2s" data-expanded="false">chevron_right</span>
-                <span style="font-weight:${unreadInThread > 0 ? '700' : '400'};color:${unreadInThread > 0 ? 'var(--text-primary)' : 'var(--text-read)'}">
-                    ${escHtml(primary.from || 'Unknown')}
-                </span>
-                <span class="thread-count-badge">${group.length}</span>
-                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px;font-size:0.8125rem;color:var(--text-muted)">${escHtml(primary.subject || '(no subject)')}</span>
-                ${starredInThread ? '<span class="material-icons-round" style="color:var(--star-color);font-size:18px">star</span>' : ''}
-                <span style="font-size:0.75rem;color:var(--text-muted);margin-left:8px">${relativeTime(primary.timestamp)}</span>`;
-
-            const childrenWrap = document.createElement('ul');
-            childrenWrap.style.display = 'none';
-            childrenWrap.style.listStyle = 'none';
-            childrenWrap.style.margin = '0';
-            childrenWrap.style.padding = '0';
-
-            let expanded = false;
-            headerEl.onclick = (e) => {
-                e.stopPropagation();
-                expanded = !expanded;
-                childrenWrap.style.display = expanded ? 'block' : 'none';
-                const chevron = headerEl.querySelector('.material-icons-round');
-                chevron.style.transform = expanded ? 'rotate(90deg)' : 'rotate(0deg)';
-                if (expanded) {
-                    // Open the first unread or the first email
-                    const first = group.find(e => !isRead(emailId(e))) || group[0];
-                    openEmailDetail(first);
-                }
-            };
-
-            group.forEach(email => {
-                const row = buildEmailRow(email, state.displayEmails.indexOf(email));
-                row.classList.add('thread-child');
-                childrenWrap.appendChild(row);
-            });
-
-            threadWrap.appendChild(headerEl);
-            threadWrap.appendChild(childrenWrap);
-            listEl.appendChild(threadWrap);
-        }
+        listEl.appendChild(buildThreadRow(group, state.displayEmails.indexOf(group[0])));
     });
 
     // Restore keyboard selection highlight
@@ -140,23 +87,42 @@ function updateSelectAllState() {
     selectAllCb.indeterminate = checked.length > 0 && checked.length < cbs.length;
 }
 
-function buildEmailRow(email, index) {
-    const id      = emailId(email);
-    const read    = isRead(id);
-    const starred = isStarred(id);
-    const labels  = getLabels(id);
+function buildThreadRow(group, index) {
+    // The most recent email (first in group, assuming pre-sorted or we just use the first)
+    const primary = group[0];
+    const id = emailId(primary);
+
+    // Unread if ANY email in thread is unread
+    const isUnread = group.some(e => !isRead(emailId(e)));
+    const read = !isUnread;
+
+    // Starred if ANY email in thread is starred
+    const starred = group.some(e => isStarred(emailId(e)));
+
+    // Aggregate labels across the thread
+    const allLabels = new Set();
+    group.forEach(e => getLabels(emailId(e)).forEach(l => allLabels.add(l)));
+    const labelsHtml = Array.from(allLabels).map(lid => {
+        const def = LABEL_DEFS.find(l => l.id === lid);
+        return def ? `<span class="label-chip-mini" style="background:${def.color}">${def.name}</span>` : '';
+    }).join('');
+
+    // Summarize senders
+    let sendersStr = '';
+    if (group.length === 1) {
+        sendersStr = formatSenderName(primary.from);
+    } else {
+        // Collect unique senders
+        const uniqueSenders = new Set(group.map(e => formatSenderName(e.from)));
+        sendersStr = Array.from(uniqueSenders).join(', ');
+    }
 
     const li = document.createElement('li');
     li.className   = `email-row${read ? ' read' : ''}`;
     li.dataset.idx = index;
     li.setAttribute('role', 'listitem');
 
-    const labelsHtml = labels.map(lid => {
-        const def = LABEL_DEFS.find(l => l.id === lid);
-        return def ? `<span class="label-chip-mini" style="background:${def.color}">${def.name}</span>` : '';
-    }).join('');
-
-    const previewText = (email.text || '').slice(0, 100).replace(/\s+/g, ' ');
+    const previewText = (primary.text || '').slice(0, 100).replace(/\s+/g, ' ');
 
     li.innerHTML = `
         <div class="row-checkbox" style="padding-left: 16px; display: flex; align-items: center;">
@@ -167,19 +133,29 @@ function buildEmailRow(email, index) {
                 <span class="material-icons-round">${starred ? 'star' : 'star_border'}</span>
             </button>
         </div>
-        <div class="row-from">
-            <span class="email-row-from">${escHtml(formatSenderName(email.from))}</span>
+        <div class="row-from flex items-center gap-1">
+            <span class="email-row-from flex-1 truncate">${escHtml(sendersStr)}</span>
+            ${group.length > 1 ? `<span class="text-xs bg-border px-1.5 rounded text-text-secondary">${group.length}</span>` : ''}
         </div>
         <div class="row-content">
-            <span class="email-row-subject">${escHtml(email.subject || '(no subject)')}</span>
+            <span class="email-row-subject">${escHtml(primary.subject || '(no subject)')}</span>
             <span class="email-row-preview"> — ${escHtml(previewText)}</span>
             <div class="row-labels">${labelsHtml}</div>
         </div>
-        <span class="row-time">${relativeTime(email.timestamp)}</span>
+        <span class="row-time">${relativeTime(primary.timestamp)}</span>
         <div class="row-actions">
-            <button class="row-action-btn" data-action="trash" data-id="${escHtml(id)}" data-ts="${escHtml(String(email.timestamp))}" title="Move to Trash">
-                <span class="material-icons-round">delete_outline</span>
-            </button>
+            ${state.currentFolder === 'trash' ? `
+                <button class="row-action-btn" data-action="recover" data-id="${escHtml(id)}" data-ts="${escHtml(String(primary.timestamp))}" title="Recover">
+                    <span class="material-icons-round">restore</span>
+                </button>
+                <button class="row-action-btn" data-action="perm-delete" data-id="${escHtml(id)}" data-ts="${escHtml(String(primary.timestamp))}" title="Permanently Delete">
+                    <span class="material-icons-round">delete_forever</span>
+                </button>
+            ` : `
+                <button class="row-action-btn" data-action="trash" data-id="${escHtml(id)}" data-ts="${escHtml(String(primary.timestamp))}" title="Move to Trash">
+                    <span class="material-icons-round">delete_outline</span>
+                </button>
+            `}
         </div>`;
 
     // Checkbox click
@@ -192,26 +168,58 @@ function buildEmailRow(email, index) {
         });
     }
 
-    // Star click
+    // Star click (stars all emails in the thread)
     li.querySelector('.star-btn').addEventListener('click', e => {
         e.stopPropagation();
-        const nowStarred = toggleStar(id);
+        let nowStarred = false;
+        group.forEach(e => {
+            nowStarred = toggleStar(emailId(e)) || nowStarred;
+        });
         const btn = e.currentTarget;
         btn.classList.toggle('starred', nowStarred);
         btn.querySelector('.material-icons-round').textContent = nowStarred ? 'star' : 'star_border';
         updateBadges();
     });
 
-    // Trash click
-    li.querySelector('[data-action="trash"]').addEventListener('click', async e => {
-        e.stopPropagation();
-        await moveToTrash(state.currentMailbox, email.timestamp, id);
-    });
+    // Trash click (trashes all emails in thread)
+    const trashBtn = li.querySelector('[data-action="trash"]');
+    if (trashBtn) {
+        trashBtn.addEventListener('click', async e => {
+            e.stopPropagation();
+            for (const email of group) {
+                await moveToTrash(state.currentMailbox, email.timestamp, emailId(email));
+            }
+        });
+    }
 
-    // Row click → open detail
+    // Recover click (recovers all emails in thread)
+    const recoverBtn = li.querySelector('[data-action="recover"]');
+    if (recoverBtn) {
+        recoverBtn.addEventListener('click', async e => {
+            e.stopPropagation();
+            for (const email of group) {
+                await recoverEmail(state.currentMailbox, email.timestamp, emailId(email));
+            }
+        });
+    }
+
+    // Permanent Delete click (deletes all emails in thread)
+    const permDelBtn = li.querySelector('[data-action="perm-delete"]');
+    if (permDelBtn) {
+        permDelBtn.addEventListener('click', async e => {
+            e.stopPropagation();
+            if (confirm("Are you sure you want to permanently delete this entire thread? This cannot be undone.")) {
+                for (const email of group) {
+                    await permDeleteEmail(state.currentMailbox, email.timestamp, emailId(email));
+                }
+            }
+        });
+    }
+
+    // Row click → open detail view with the full thread group
     li.addEventListener('click', () => {
         state.selectedIndex = index;
-        openEmailDetail(email);
+        openEmailDetail(group);
     });
 
     return li;
@@ -243,69 +251,148 @@ function groupByThread(emails) {
     return order.map(k => groups.get(k));
 }
 
-async function openEmailDetail(email) {
-    const id = emailId(email);
-    state.openEmail = email;
+async function openEmailDetail(group) {
+    state.openEmail = group; // store the whole group
 
-    // Mark as read
-    markRead(id);
-    const row = document.querySelector(`.email-row[data-idx="${state.displayEmails.indexOf(email)}"]`);
-    if (row) row.classList.add('read');
+    // 1. Sort chronologically (oldest first, so the newest is at the bottom like Gmail)
+    const sortedGroup = [...group].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const primary = sortedGroup[sortedGroup.length - 1]; // most recent email
+
+    // Mark all as read immediately
+    sortedGroup.forEach(e => {
+        const id = emailId(e);
+        markRead(id);
+        const row = document.querySelector(`.email-row[data-id="${id}"]`);
+        if (row) row.classList.add('read');
+    });
 
     showView('detail');
     updateBadges();
 
-    // Subject
-    document.getElementById('detail-subject').textContent = email.subject || '(no subject)';
+    // Set Subject at the very top of the thread view
+    document.getElementById('detail-subject').textContent = primary.subject || '(no subject)';
 
-    // Back label
+    // Set Back label
     const folderNames = { inbox: 'Inbox', starred: 'Starred', sent: 'Sent', trash: 'Trash' };
     document.getElementById('detail-back-label').textContent = folderNames[state.currentFolder] || 'Inbox';
 
-    // Meta — show To: recipient for sent emails, mailbox for received
-    const metaEl = document.getElementById('detail-meta');
-    const toAddr = email.to || state.currentMailbox || '';
-    metaEl.innerHTML = `
-        <div class="meta-row"><span class="meta-label">From</span><span>${escHtml(email.from || 'Unknown')}</span></div>
-        <div class="meta-row"><span class="meta-label">To</span><span>${escHtml(toAddr)}</span></div>
-        <div class="meta-row"><span class="meta-label">Date</span><span>${new Date(email.timestamp).toLocaleString()}</span></div>`;
+    const container = document.getElementById('thread-messages-container');
+    container.innerHTML = '';
 
-    // Star button state
-    const starred = isStarred(id);
-    document.getElementById('star-detail-icon').textContent = starred ? 'star' : 'star_border';
-    const starLbl = document.getElementById('star-detail-label');
-    if (starLbl) starLbl.textContent = starred ? 'Unstar' : 'Star';
+    // Render each email as a card
+    sortedGroup.forEach((email, index) => {
+        const id = emailId(email);
+        const isLast = index === sortedGroup.length - 1;
+        // Default to collapsed unless it's the very last email in the thread, or it's unread
+        // (Wait, we just marked them all as read above, so we should have checked unread state before...
+        // Let's just always expand the last email for simplicity)
+        const expanded = isLast; 
 
-    // Labels row
-    renderDetailLabels(id);
+        const card = document.createElement('div');
+        card.className = 'email-detail-card border border-border rounded-xl bg-bg-card mb-4 overflow-hidden';
+        
+        // Header
+        const header = document.createElement('div');
+        header.className = 'email-card-header p-4 flex items-center justify-between cursor-pointer hover:bg-bg-hover transition-colors';
+        const toAddr = email.to || state.currentMailbox || '';
+        
+        header.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden">
+                <div class="mailbox-icon shadow-sm w-8 h-8 flex-shrink-0" style="background: var(--accent); color: white;">
+                    ${(email.from || '?').charAt(0).toUpperCase()}
+                </div>
+                <div class="flex flex-col truncate">
+                    <span class="font-bold text-text-primary text-sm truncate">${escHtml(email.from || 'Unknown')}</span>
+                    <span class="text-xs text-text-muted truncate">to ${escHtml(toAddr)}</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <span class="text-xs text-text-muted">${relativeTime(email.timestamp)}</span>
+                <div class="flex items-center gap-1 text-text-muted">
+                    <button class="card-star-btn border-none bg-transparent cursor-pointer hover:text-text-primary transition-colors flex items-center justify-center p-1" title="Star">
+                        <span class="material-icons-round text-[18px] ${isStarred(id) ? 'text-[#f4b400]' : ''}">${isStarred(id) ? 'star' : 'star_border'}</span>
+                    </button>
+                    <button class="card-reply-btn border-none bg-transparent cursor-pointer hover:text-text-primary transition-colors flex items-center justify-center p-1" title="Reply">
+                        <span class="material-icons-round text-[18px]">reply</span>
+                    </button>
+                    ${state.currentFolder === 'trash' ? '' : `
+                        <button class="card-trash-btn border-none bg-transparent cursor-pointer hover:text-danger transition-colors flex items-center justify-center p-1" title="Trash">
+                            <span class="material-icons-round text-[18px]">delete</span>
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
 
-    // Attachments (metadata from DynamoDB, always available immediately)
-    renderAttachments(email);
+        // Body container
+        const bodyContainer = document.createElement('div');
+        bodyContainer.className = `email-card-body border-t border-border ${expanded ? 'block' : 'hidden'}`;
 
-    // ── Body: lazy-load from S3 ──────────────────────────────────────────────
-    // Show spinner immediately so the user sees something while the fetch runs
-    const htmlEl   = document.getElementById('detail-html');
-    const textEl   = document.getElementById('detail-text');
-    const SPINNER  = `<div style="padding:32px;text-align:center;color:var(--text-muted)">
-        <span class="material-icons-round" style="font-size:32px;animation:spin 1s linear infinite;display:block;margin-bottom:8px">refresh</span>
-        Loading message…</div>`;
+        const SPINNER = `<div class="p-8 text-center text-text-muted flex flex-col items-center">
+            <span class="material-icons-round animate-spin text-[32px] mb-2">refresh</span>
+            Loading message...
+        </div>`;
+        bodyContainer.innerHTML = SPINNER;
 
-    htmlEl.innerHTML = SPINNER;
-    textEl.textContent = '';
-    showBodyView('html'); // show HTML pane while loading
+        card.appendChild(header);
+        card.appendChild(bodyContainer);
+        container.appendChild(card);
 
+        // Click header to toggle expand/collapse
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return; // ignore clicks on buttons
+            const isHidden = bodyContainer.classList.contains('hidden');
+            if (isHidden) {
+                bodyContainer.classList.remove('hidden');
+                if (bodyContainer.innerHTML === SPINNER) {
+                    loadEmailBody(email, bodyContainer);
+                }
+            } else {
+                bodyContainer.classList.add('hidden');
+            }
+        });
+
+        // Setup actions
+        header.querySelector('.card-star-btn').onclick = (e) => {
+            e.stopPropagation();
+            const nowStarred = toggleStar(id);
+            const icon = e.currentTarget.querySelector('span');
+            icon.textContent = nowStarred ? 'star' : 'star_border';
+            icon.className = `material-icons-round text-[18px] ${nowStarred ? 'text-[#f4b400]' : ''}`;
+            updateBadges();
+        };
+
+        header.querySelector('.card-reply-btn').onclick = (e) => {
+            e.stopPropagation();
+            openCompose(email.from);
+        };
+
+        const trashBtn = header.querySelector('.card-trash-btn');
+        if (trashBtn) {
+            trashBtn.onclick = async (e) => {
+                e.stopPropagation();
+                await moveToTrash(state.currentMailbox, email.timestamp, id);
+                card.remove();
+                if (container.children.length === 0) {
+                    showView('inbox');
+                }
+            };
+        }
+
+        // If initially expanded, load body immediately
+        if (expanded) {
+            loadEmailBody(email, bodyContainer);
+        }
+    });
+}
+
+async function loadEmailBody(email, container) {
     try {
         let body;
-
         if (email.messageId) {
-            // Try the S3 body endpoint first (new emails)
             try {
-                body = await apiCall(
-                    `/emails/${encodeURIComponent(state.currentMailbox)}/${encodeURIComponent(email.messageId)}/body`
-                );
+                body = await apiCall(`/emails/${encodeURIComponent(state.currentMailbox)}/${encodeURIComponent(email.messageId)}/body`);
             } catch (s3Err) {
-                // 404 = old email whose body is still in DynamoDB (pre-migration)
-                // Fall back to fields already on the email object
                 if (s3Err.status === 404 || s3Err.message?.includes('404')) {
                     body = { text: email.text || '', html: email.html || '' };
                 } else {
@@ -313,100 +400,80 @@ async function openEmailDetail(email) {
                 }
             }
         } else {
-            // No messageId — shouldn't happen, but handle gracefully
             body = { text: email.text || '', html: email.html || '' };
         }
 
-        // Render body
-        document.getElementById('detail-text').textContent = body.text || '(No text content)';
-        if (body.html) {
-            renderSafeHtmlEmail(htmlEl, body.html);
+        // Check for rich attachments
+        const attachments = body.attachments?.length > 0 ? body.attachments : (email.attachments || []);
+
+        let attHtml = '';
+        if (attachments.length > 0) {
+            attHtml = `
+                <div class="px-6 py-3 border-b border-border bg-bg-page flex flex-wrap gap-2">
+                    ${attachments.map(a => `
+                        <div class="inline-flex items-center gap-1 px-2 py-1 bg-bg-hover border border-border rounded-lg text-xs text-text-secondary whitespace-nowrap">
+                            <span class="material-icons-round text-[14px]">attach_file</span>
+                            <span>${escHtml(a.filename)}</span>
+                            <span class="text-text-muted ml-1">${formatBytes(a.size)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Content tabs
+        const hasHtml = !!body.html;
+        const htmlContent = body.html || `<p style="color:var(--text-muted);padding:16px">${body.text ? escHtml(body.text).replace(/\\n/g, '<br>') : '(No content)'}</p>`;
+        const textContent = body.text || '(No text content)';
+
+        container.innerHTML = `
+            ${attHtml}
+            <div class="px-6 pt-3 flex gap-4 border-b border-border bg-bg-card">
+                <button class="body-toggle-btn active bg-transparent border-none border-b-2 border-accent pb-2 font-medium text-accent cursor-pointer" data-target="html">HTML</button>
+                <button class="body-toggle-btn bg-transparent border-none border-b-2 border-transparent pb-2 font-medium text-text-secondary cursor-pointer hover:text-text-primary" data-target="text">Plain Text</button>
+            </div>
+            <div class="body-html p-6 text-[0.9375rem] leading-relaxed text-text-primary bg-white [&>iframe]:w-full [&>iframe]:border-none [&>iframe]:min-h-[300px]"></div>
+            <div class="body-text hidden p-6 text-[0.9375rem] leading-relaxed text-text-primary whitespace-pre-wrap font-mono bg-bg-page">${escHtml(textContent)}</div>
+        `;
+
+        // Render HTML securely
+        if (hasHtml) {
+            renderSafeHtmlEmail(container.querySelector('.body-html'), body.html);
         } else {
-            htmlEl.innerHTML = `<p style="color:var(--text-muted);padding:16px">${body.text
-                ? escHtml(body.text).replace(/\n/g, '<br>')
-                : '(No content available)'}</p>`;
+            container.querySelector('.body-html').innerHTML = htmlContent;
         }
 
-        // Update attachment metadata if the S3 body includes richer info
-        if (body.attachments?.length > 0 && (!email.attachments || email.attachments.length === 0)) {
-            renderAttachments({ ...email, attachments: body.attachments });
-        }
+        // Toggles
+        const htmlBtn = container.querySelector('.body-toggle-btn[data-target="html"]');
+        const textBtn = container.querySelector('.body-toggle-btn[data-target="text"]');
+        const htmlDiv = container.querySelector('.body-html');
+        const textDiv = container.querySelector('.body-text');
 
-        showBodyView(body.html ? 'html' : 'text');
+        htmlBtn.onclick = () => {
+            htmlBtn.className = 'body-toggle-btn active bg-transparent border-none border-b-2 border-accent pb-2 font-medium text-accent cursor-pointer';
+            textBtn.className = 'body-toggle-btn bg-transparent border-none border-b-2 border-transparent pb-2 font-medium text-text-secondary cursor-pointer hover:text-text-primary';
+            htmlDiv.classList.remove('hidden');
+            textDiv.classList.add('hidden');
+        };
+        textBtn.onclick = () => {
+            textBtn.className = 'body-toggle-btn active bg-transparent border-none border-b-2 border-accent pb-2 font-medium text-accent cursor-pointer';
+            htmlBtn.className = 'body-toggle-btn bg-transparent border-none border-b-2 border-transparent pb-2 font-medium text-text-secondary cursor-pointer hover:text-text-primary';
+            textDiv.classList.remove('hidden');
+            htmlDiv.classList.add('hidden');
+        };
+
     } catch (err) {
-        htmlEl.innerHTML = `<div style="color:var(--danger);padding:24px">
-            <span class="material-icons-round" style="vertical-align:middle">error_outline</span>
-            Failed to load message body.</div>`;
+        container.innerHTML = `<div class="p-6 text-danger flex items-center gap-2">
+            <span class="material-icons-round">error_outline</span> Failed to load message body.
+        </div>`;
         console.error('Body load error:', err);
     }
-}
-
-function renderDetailLabels(id) {
-    const labels   = getLabels(id);
-    const labelsEl = document.getElementById('detail-labels-row');
-    labelsEl.innerHTML = '';
-
-    labels.forEach(lid => {
-        const def = LABEL_DEFS.find(l => l.id === lid);
-        if (!def) return;
-        const chip = document.createElement('span');
-        chip.className = 'label-chip';
-        chip.style.background = def.color;
-        chip.innerHTML = `${escHtml(def.name)}<span class="material-icons-round remove-label" title="Remove label">close</span>`;
-        chip.querySelector('.remove-label').onclick = () => {
-            removeLabel(id, lid);
-            renderDetailLabels(id);
-            renderEmailList();
-        };
-        labelsEl.appendChild(chip);
-    });
-
-    const addBtn = document.createElement('button');
-    addBtn.id = 'btn-add-label';
-    addBtn.innerHTML = `<span class="material-icons-round" style="font-size:14px">add</span> Add label`;
-    addBtn.onclick = () => openLabelPicker(id);
-    labelsEl.appendChild(addBtn);
-}
-
-function renderAttachments(email) {
-    const el = document.getElementById('detail-attachments');
-    el.innerHTML = '';
-    const atts = email.attachments || [];
-    if (atts.length === 0) { el.classList.add('hidden'); return; }
-    el.classList.remove('hidden');
-    atts.forEach(a => {
-        const chip = document.createElement('div');
-        chip.className = 'attachment-chip';
-        chip.innerHTML = `<span class="material-icons-round">attach_file</span>
-            <span>${escHtml(a.filename)}</span>
-            <span style="color:var(--text-muted);font-size:0.75rem">${formatBytes(a.size)}</span>`;
-        el.appendChild(chip);
-    });
 }
 
 function formatBytes(b) {
     if (b < 1024)      return b + ' B';
     if (b < 1048576)   return (b / 1024).toFixed(1) + ' KB';
     return (b / 1048576).toFixed(1) + ' MB';
-}
-
-function showBodyView(which) {
-    const textEl = document.getElementById('detail-text');
-    const htmlEl = document.getElementById('detail-html');
-    const txtBtn = document.getElementById('btn-view-text');
-    const htmBtn = document.getElementById('btn-view-html');
-
-    if (which === 'text') {
-        textEl.style.display = 'block';
-        htmlEl.style.display = 'none';
-        txtBtn.classList.add('active');
-        htmBtn.classList.remove('active');
-    } else {
-        textEl.style.display = 'none';
-        htmlEl.style.display = 'block';
-        txtBtn.classList.remove('active');
-        htmBtn.classList.add('active');
-    }
 }
 
 
@@ -431,6 +498,44 @@ async function moveToTrash(mailbox, timestamp, id) {
         showToast('Moved to Trash. Emails permanently delete after 30 days.', 'default');
     } catch (e) {
         showToast('Failed to move to trash: ' + e.message, 'error');
+    }
+}
+
+async function recoverEmail(mailbox, timestamp, id) {
+    try {
+        await apiCall(`/emails/${encodeURIComponent(mailbox)}/${encodeURIComponent(timestamp)}/recover`, { method: 'PATCH' });
+
+        state.currentEmails = state.currentEmails.filter(e => emailId(e) !== id);
+        renderEmailList();
+        updateBadges();
+
+        if (state.openEmail && emailId(state.openEmail) === id) {
+            showView('trash');
+            state.openEmail = null;
+        }
+
+        showToast('Email recovered to Inbox.', 'default');
+    } catch (e) {
+        showToast('Failed to recover email: ' + e.message, 'error');
+    }
+}
+
+async function permDeleteEmail(mailbox, timestamp, id) {
+    try {
+        await apiCall(`/emails/${encodeURIComponent(mailbox)}/${encodeURIComponent(timestamp)}/permanent`, { method: 'DELETE' });
+
+        state.currentEmails = state.currentEmails.filter(e => emailId(e) !== id);
+        renderEmailList();
+        updateBadges();
+
+        if (state.openEmail && emailId(state.openEmail) === id) {
+            showView('trash');
+            state.openEmail = null;
+        }
+
+        showToast('Email permanently deleted.', 'default');
+    } catch (e) {
+        showToast('Failed to delete email: ' + e.message, 'error');
     }
 }
 

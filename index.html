@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HaxMail — Webmail</title>
     <meta name="description" content="HaxMail — Fast, secure webmail for haxnation.org domains">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a73e8">
+    <link rel="apple-touch-icon" href="/icon.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
             integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
@@ -105,6 +108,9 @@
         }
         @layer utilities {
             .hidden { display: none !important; }
+            @media (max-width: 767px) {
+                .mobile-hidden { display: none !important; }
+            }
             .scrollbar-hide::-webkit-scrollbar { display: none; }
             .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
             
@@ -297,25 +303,25 @@
 <div id="app-shell" class="flex flex-col h-screen overflow-hidden">
 
     <!-- ===== TOP NAV ===== -->
-    <nav id="top-nav" class="hidden flex items-center gap-2 p-2 sm:px-4 bg-bg-sidebar border-b border-border shrink-0 z-50 shadow-sm w-full">
+    <nav id="top-nav" class="hidden flex items-center justify-between gap-1 sm:gap-2 p-2 sm:px-4 bg-bg-sidebar border-b border-border shrink-0 z-50 shadow-sm w-full">
         <!-- Mobile Sidebar Toggle -->
-        <button id="btn-mobile-menu" class="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" title="Menu">
+        <button id="btn-mobile-menu" class="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors shrink-0" title="Menu">
             <span class="material-icons-round">menu</span>
         </button>
 
-        <a id="nav-logo" href="#" class="flex items-center gap-2 px-2 no-underline min-w-0 sm:min-w-[180px]">
+        <a id="nav-logo" href="#" class="flex items-center gap-2 px-1 sm:px-2 no-underline min-w-0 sm:min-w-[180px] shrink-0">
             <div class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-[#1a73e8] to-[#34a853] rounded-full text-white text-base sm:text-lg font-bold shrink-0">H</div>
             <span class="hidden sm:block text-[1.375rem] font-semibold text-text-secondary tracking-[-0.3px]">HaxMail</span>
         </a>
 
-        <div id="nav-search-wrap" class="flex-1 max-w-[720px] mx-2 sm:mx-4">
+        <div id="nav-search-wrap" class="flex-1 min-w-[80px] max-w-[720px] mx-1 sm:mx-4">
             <div id="nav-search-inner" class="relative bg-bg-hover rounded-full flex items-center px-3 transition-all focus-within:bg-bg-card focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_0_0_1px_var(--tw-colors-accent-DEFAULT)]">
                 <span class="material-icons-round text-text-muted text-[20px]">search</span>
                 <input type="search" id="global-search" class="flex-1 border-none bg-transparent p-2 sm:p-2.5 text-base font-sans text-text-primary outline-none placeholder:text-text-muted" placeholder="Search mail" autocomplete="off" spellcheck="false">
             </div>
         </div>
 
-        <div id="nav-actions-right" class="flex items-center gap-1 sm:gap-2 ml-auto">
+        <div id="nav-actions-right" class="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
             <button class="nav-icon-btn flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" id="btn-dark-toggle" title="Toggle dark mode">
                 <span class="material-icons-round text-[20px] sm:text-[22px]" id="dark-icon">dark_mode</span>
             </button>
@@ -334,7 +340,7 @@
 
         <!-- ===== SIDEBAR ===== -->
         <!-- On mobile: absolute, z-40, hidden by default. On md+: static, block, border-r -->
-        <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-bg-sidebar shrink-0 overflow-y-auto py-2 border-r border-border absolute md:static inset-y-0 left-0 z-40 shadow-lg md:shadow-none transition-transform">
+        <aside id="sidebar" class="hidden mobile-hidden md:flex flex-col w-64 bg-bg-sidebar shrink-0 overflow-y-auto py-2 border-r border-border absolute md:static inset-y-0 left-0 z-40 shadow-lg md:shadow-none transition-transform">
 
             <button id="btn-compose-main" class="flex items-center gap-3 bg-[#c2e7ff] dark:bg-[#004a77] text-[#001d35] dark:text-[#c2e7ff] rounded-2xl px-6 py-4 mx-4 my-2 mb-4 font-sans text-[0.9375rem] font-semibold shadow-sm hover:shadow-md hover:bg-[#a8d8f8] dark:hover:bg-[#005993] transition-all w-[calc(100%-32px)]">
                 <span class="material-icons-round text-[22px]">edit</span>
@@ -454,32 +460,9 @@
 
                 <div id="detail-labels-row" class="px-6 pb-4 flex flex-wrap gap-1.5"></div>
 
-                <div id="detail-action-bar" class="px-6 pb-4 flex flex-wrap gap-2">
-                    <button class="detail-action-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded bg-bg-card text-text-secondary text-sm cursor-pointer transition-colors hover:bg-bg-hover hover:text-text-primary" id="btn-reply">
-                        <span class="material-icons-round text-[18px]">reply</span> Reply
-                    </button>
-                    <button class="detail-action-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded bg-bg-card text-text-secondary text-sm cursor-pointer transition-colors hover:bg-bg-hover hover:text-text-primary" id="btn-forward">
-                        <span class="material-icons-round text-[18px]">forward</span> Forward
-                    </button>
-                    <button class="detail-action-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded bg-bg-card text-text-secondary text-sm cursor-pointer transition-colors hover:bg-bg-hover hover:text-text-primary" id="btn-star-detail">
-                        <span class="material-icons-round text-[18px]" id="star-detail-icon">star_border</span> <span id="star-detail-label">Star</span>
-                    </button>
-                    <button class="detail-action-btn danger inline-flex items-center gap-1.5 px-3 py-1.5 border border-border rounded bg-bg-card text-text-secondary text-sm cursor-pointer transition-colors hover:bg-[#fce8e6] dark:hover:bg-[#3c1e1e] hover:text-danger hover:border-transparent" id="btn-delete">
-                        <span class="material-icons-round text-[18px]">delete</span> Move to Trash
-                    </button>
+                <div id="thread-messages-container" class="flex flex-col">
+                    <!-- Thread messages will be injected here -->
                 </div>
-
-                <div id="detail-attachments" class="hidden px-6 pb-4 flex flex-wrap gap-2"></div>
-
-                <div id="detail-meta" class="px-6 py-4 bg-bg-page border-y border-border text-sm text-text-primary"></div>
-
-                <div id="detail-body-toggle" class="px-6 pt-4 flex gap-4 border-b border-border">
-                    <button class="toggle-btn active bg-transparent border-none border-b-2 border-transparent pb-2 font-medium text-text-secondary cursor-pointer hover:text-text-primary [&.active]:text-accent [&.active]:border-accent" id="btn-view-text">Plain Text</button>
-                    <button class="toggle-btn bg-transparent border-none border-b-2 border-transparent pb-2 font-medium text-text-secondary cursor-pointer hover:text-text-primary [&.active]:text-accent [&.active]:border-accent" id="btn-view-html">HTML</button>
-                </div>
-
-                <div id="detail-text" class="p-6 text-[0.9375rem] leading-relaxed text-text-primary flex-1 whitespace-pre-wrap font-mono bg-bg-page"></div>
-                <div id="detail-html" class="p-6 text-[0.9375rem] leading-relaxed text-text-primary flex-1 bg-white [&>iframe]:w-full [&>iframe]:border-none [&>iframe]:min-h-[400px]"></div>
             </div>
 
             <!-- SETTINGS VIEW -->
@@ -671,13 +654,27 @@
 <script src="aws-intercept.js"></script>
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/labels.js"></script>
 <script src="js/compose.js"></script>
 <script src="js/signatures.js"></script>
 <script src="js/emailList.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/shortcuts.js"></script>
 <script src="js/app.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      }).catch(err => {
+        console.log('ServiceWorker registration failed: ', err);
+      });
+    });
+  }
+</script>
 </body>
 </html>

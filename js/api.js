@@ -106,7 +106,7 @@ async function loadEmails() {
     emptyEl.classList.add('hidden');
 
     try {
-        const emails = await apiCall(`/emails/${encodeURIComponent(mailbox)}?folder=${folder}`);
+        const emails = (await apiCall(`/emails/${encodeURIComponent(mailbox)}?folder=${folder}`)) || [];
         state.currentEmails = emails;
 
         // Track IDs for auto-refresh diffing
