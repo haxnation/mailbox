@@ -365,7 +365,7 @@ async function openEmailDetail(group) {
 
         header.querySelector('.card-reply-btn').onclick = (e) => {
             e.stopPropagation();
-            openCompose(email.from);
+            replyToEmail(email);
         };
 
         const trashBtn = header.querySelector('.card-trash-btn');

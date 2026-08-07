@@ -7,16 +7,23 @@ function replyToEmail(email) {
     const subjInp  = document.getElementById('compose-subject');
     const bodyEl   = document.getElementById('compose-body');
 
-    // Try to use current mailbox as from
+    // Try to use the email it was received in as the sender
     const options = Array.from(fromSel.options).map(o => o.value);
-    if (state.currentMailbox && options.includes(state.currentMailbox)) {
+    const preferredFrom = email.to || email.mailbox || state.currentMailbox;
+    if (preferredFrom && options.includes(preferredFrom)) {
+        fromSel.value = preferredFrom;
+    } else if (state.currentMailbox && options.includes(state.currentMailbox)) {
         fromSel.value = state.currentMailbox;
     }
 
     // Extract reply-to address
-    const replyTo = extractEmail(email.from);
+    const isSent = email.folder === 'sent';
+    const replyTo = extractEmail(isSent ? email.to : email.from);
     toInput.value  = replyTo;
-    subjInp.value  = email.subject?.startsWith('Re:') ? email.subject : `Re: ${email.subject || ''}`;
+    
+    const subj = email.subject || '';
+    subjInp.value  = /^re:\s*/i.test(subj) ? subj : `Re: ${subj}`;
+
 
     // Quoted body
     const quoted = buildQuoteHtml(email);
@@ -33,7 +40,8 @@ function forwardEmail(email) {
     const toInput = document.getElementById('compose-to');
 
     toInput.value  = '';
-    subjInp.value  = email.subject?.startsWith('Fwd:') ? email.subject : `Fwd: ${email.subject || ''}`;
+    const subj = email.subject || '';
+    subjInp.value  = /^fwd?:\s*/i.test(subj) ? subj : `Fwd: ${subj}`;
     bodyEl.innerHTML = buildQuoteHtml(email);
     applySignatureToCompose();
     document.getElementById('compose-title').textContent = 'Forward';
