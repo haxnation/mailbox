@@ -45,11 +45,11 @@ function initKeyboardShortcuts() {
         // Ignore if modifier keys are pressed (e.g., Ctrl+C for copy)
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        const emails = state.displayEmails;
+        const threads = state.displayThreads || [];
 
         switch (e.key) {
             case 'j':
-                state.selectedIndex = Math.min(state.selectedIndex + 1, emails.length - 1);
+                state.selectedIndex = Math.min(state.selectedIndex + 1, threads.length - 1);
                 highlightSelectedRow();
                 break;
             case 'k':
@@ -57,8 +57,8 @@ function initKeyboardShortcuts() {
                 highlightSelectedRow();
                 break;
             case 'Enter':
-                if (state.selectedIndex >= 0 && emails[state.selectedIndex]) {
-                    openEmailDetail(emails[state.selectedIndex]);
+                if (state.selectedIndex >= 0 && threads[state.selectedIndex]) {
+                    openEmailDetail(threads[state.selectedIndex]);
                 }
                 break;
             case 'c':
@@ -69,18 +69,23 @@ function initKeyboardShortcuts() {
                 showToast('Refreshed', 'default', 1500);
                 break;
             case 's':
-                if (state.selectedIndex >= 0 && emails[state.selectedIndex]) {
-                    const id = emailId(emails[state.selectedIndex]);
-                    const nowStarred = toggleStar(id);
+                if (state.selectedIndex >= 0 && threads[state.selectedIndex]) {
+                    const group = threads[state.selectedIndex];
+                    let nowStarred = false;
+                    group.forEach(email => {
+                        nowStarred = toggleStar(emailId(email)) || nowStarred;
+                    });
                     renderEmailList();
                     updateBadges();
                     showToast(nowStarred ? 'Starred' : 'Unstarred', 'default', 1500);
                 }
                 break;
             case '#':
-                if (state.selectedIndex >= 0 && emails[state.selectedIndex]) {
-                    const email = emails[state.selectedIndex];
-                    moveToTrash(state.currentMailbox, email.timestamp, emailId(email));
+                if (state.selectedIndex >= 0 && threads[state.selectedIndex]) {
+                    const group = threads[state.selectedIndex];
+                    group.forEach(email => {
+                        moveToTrash(state.currentMailbox, email.timestamp, emailId(email));
+                    });
                 }
                 break;
             case 'd':

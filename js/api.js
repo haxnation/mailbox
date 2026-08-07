@@ -64,7 +64,22 @@ async function loadMailboxes() {
 
         // Auto-select first mailbox
         if (mailboxes.length > 0) {
-            selectMailbox(mailboxes[0].address);
+            const urlParams = new URLSearchParams(window.location.search);
+            let view = urlParams.get('view');
+            let folder = urlParams.get('folder');
+            
+            // If the URL asks for login but we are already authenticated, default to inbox
+            if (view === 'login') {
+                view = 'inbox';
+                window.history.replaceState({ view: 'inbox', folder: folder || 'inbox' }, '', `?view=inbox&folder=${folder || 'inbox'}`);
+            }
+
+            selectMailbox(mailboxes[0].address, folder || 'inbox', view !== 'inbox' && view ? false : true);
+
+            if (view && view !== 'inbox') {
+                if (view === 'settings') renderSignaturesList();
+                showView(view);
+            }
         }
 
         renderSidebarLabels();
@@ -73,20 +88,24 @@ async function loadMailboxes() {
     }
 }
 
-function selectMailbox(address) {
+function selectMailbox(address, folder = 'inbox', doShowView = true) {
     state.currentMailbox = address;
-    state.currentFolder  = 'inbox';
+    state.currentFolder  = folder;
 
     // Update sidebar active
     document.querySelectorAll('.mailbox-item').forEach(el => {
         el.classList.toggle('active', el.dataset.mailbox === address);
     });
     document.querySelectorAll('.sidebar-item[data-folder]').forEach(el => {
-        el.classList.toggle('active', el.dataset.folder === 'inbox');
+        el.classList.toggle('active', el.dataset.folder === folder);
     });
 
-    document.getElementById('inbox-title').textContent = 'Inbox';
-    showView('inbox');
+    const titles = { inbox: 'Inbox', starred: 'Starred', sent: 'Sent', trash: 'Trash' };
+    document.getElementById('inbox-title').textContent = titles[folder] || folder;
+    
+    if (doShowView) {
+        showView('inbox');
+    }
     loadEmails();
 }
 

@@ -48,9 +48,10 @@ function renderEmailList() {
 
     // 4. Group by thread (subject) — Phase 3
     const threads = groupByThread(emails);
+    state.displayThreads = threads;
 
-    threads.forEach(group => {
-        listEl.appendChild(buildThreadRow(group, state.displayEmails.indexOf(group[0])));
+    threads.forEach((group, index) => {
+        listEl.appendChild(buildThreadRow(group, index));
     });
 
     // Restore keyboard selection highlight
@@ -489,11 +490,7 @@ async function moveToTrash(mailbox, timestamp, id) {
         renderEmailList();
         updateBadges();
 
-        // If we were viewing detail, go back
-        if (state.openEmail && emailId(state.openEmail) === id) {
-            showView('inbox');
-            state.openEmail = null;
-        }
+
 
         showToast('Moved to Trash. Emails permanently delete after 30 days.', 'default');
     } catch (e) {
@@ -509,10 +506,7 @@ async function recoverEmail(mailbox, timestamp, id) {
         renderEmailList();
         updateBadges();
 
-        if (state.openEmail && emailId(state.openEmail) === id) {
-            showView('trash');
-            state.openEmail = null;
-        }
+
 
         showToast('Email recovered to Inbox.', 'default');
     } catch (e) {
@@ -528,10 +522,7 @@ async function permDeleteEmail(mailbox, timestamp, id) {
         renderEmailList();
         updateBadges();
 
-        if (state.openEmail && emailId(state.openEmail) === id) {
-            showView('trash');
-            state.openEmail = null;
-        }
+
 
         showToast('Email permanently deleted.', 'default');
     } catch (e) {

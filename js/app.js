@@ -114,6 +114,33 @@ async function requestNotificationPermission() {
 // =============================================================
 function initEvents() {
 
+    window.addEventListener('popstate', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const view = urlParams.get('view') || 'inbox';
+        
+        if (view === 'inbox') {
+            const folder = urlParams.get('folder') || 'inbox';
+            state.currentFolder = folder;
+            const titles = { inbox: 'Inbox', starred: 'Starred', sent: 'Sent', trash: 'Trash' };
+            document.getElementById('inbox-title').textContent = titles[folder] || folder;
+            
+            document.querySelectorAll('.sidebar-item[data-folder]').forEach(el => {
+                el.classList.toggle('active', el.dataset.folder === folder);
+            });
+            loadEmails();
+        }
+        
+        // Temporarily bypass showView's pushState for popstate
+        VIEW_IDS.forEach(v => {
+            const el = document.getElementById(`view-${v}`);
+            if (el) el.classList.add('hidden');
+        });
+        const target = document.getElementById(`view-${view}`);
+        if (target) {
+            target.classList.remove('hidden');
+        }
+    });
+
     // ---- Compose buttons ----
     document.getElementById('btn-compose-main').onclick  = () => openCompose(true);
     document.getElementById('btn-compose-close').onclick  = closeCompose;

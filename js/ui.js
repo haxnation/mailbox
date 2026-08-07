@@ -47,6 +47,15 @@ function showView(name) {
     if (name === 'inbox') {
         const folderEl = document.getElementById(`folder-${state.currentFolder}`);
         if (folderEl) folderEl.classList.add('active');
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        if (currentUrlParams.get('folder') !== state.currentFolder || currentUrlParams.get('view') !== 'inbox') {
+            window.history.pushState({ view: 'inbox', folder: state.currentFolder }, '', `?view=inbox&folder=${state.currentFolder || 'inbox'}`);
+        }
+    } else if (name !== 'login') {
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        if (currentUrlParams.get('view') !== name) {
+            window.history.pushState({ view: name }, '', `?view=${name}`);
+        }
     }
 }
 
