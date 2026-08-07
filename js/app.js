@@ -131,25 +131,8 @@ function initEvents() {
         state.openEmail = null;
         showView('inbox');
     };
-    document.getElementById('btn-view-text').onclick = () => showBodyView('text');
-    document.getElementById('btn-view-html').onclick = () => showBodyView('html');
-    document.getElementById('btn-reply').onclick   = () => state.openEmail && replyToEmail(state.openEmail);
-    document.getElementById('btn-forward').onclick = () => state.openEmail && forwardEmail(state.openEmail);
-    document.getElementById('btn-delete').onclick  = async () => {
-        if (!state.openEmail) return;
-        const id = emailId(state.openEmail);
-        await moveToTrash(state.currentMailbox, state.openEmail.timestamp, id);
-    };
-    document.getElementById('btn-star-detail').onclick = () => {
-        if (!state.openEmail) return;
-        const id = emailId(state.openEmail);
-        const nowStarred = toggleStar(id);
-        document.getElementById('star-detail-icon').textContent = nowStarred ? 'star' : 'star_border';
-        const lbl = document.getElementById('star-detail-label');
-        if (lbl) lbl.textContent = nowStarred ? 'Unstar' : 'Star';
-        updateBadges();
-        renderEmailList();
-    };
+    // Note: btn-view-text, btn-view-html, btn-reply, btn-forward, btn-delete, btn-star-detail
+    // are wired dynamically per email card in emailList.js — no static wiring needed here.
 
     // ---- Folder navigation ----
     document.querySelectorAll('.sidebar-item[data-folder]').forEach(el => {
