@@ -42,13 +42,18 @@ function renderSafeHtmlEmail(containerEl, rawHtml) {
         ALLOW_TAGS: ['h1','h2','h3','h4','h5','h6','p','br','hr','div','span',
                      'a','img','ul','ol','li','table','thead','tbody','tr','td','th',
                      'strong','em','b','i','u','blockquote','pre','code','sup','sub',
-                     'style','font','center'],
+                     'font','center'],
         ALLOW_ATTR: ['href','src','alt','style','class','width','height','align',
                      'valign','bgcolor','color','border','cellpadding','cellspacing',
-                     'colspan','rowspan','face','size'],
-        FORBID_TAGS: ['script','iframe','object','embed','form','input','textarea','button'],
-        FORBID_ATTR: ['onerror','onload','onclick','onmouseover','onfocus','onblur'],
-        ALLOW_DATA_ATTR: false
+                     'colspan','rowspan','face','size','target','rel'],
+        FORBID_TAGS: ['script','style','iframe','object','embed','form','input','textarea','button','base','link','meta'],
+        FORBID_ATTR: ['onerror','onload','onclick','onmouseover','onfocus','onblur',
+                      'onmouseenter','onmouseleave','onkeydown','onkeyup','onkeypress',
+                      'onsubmit','onreset','onchange','oninput','onpaste'],
+        ALLOW_DATA_ATTR: false,
+        FORCE_BODY: true,
+        // Sanitize href/src to prevent javascript: protocol injection
+        ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel):/i,
     });
 
     const htmlDoc = `<!DOCTYPE html>
