@@ -9,10 +9,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
     // Stash the event so it can be triggered later.
     deferredPrompt = e;
     
-    // Check if mobile (simple width check)
-    if (window.innerWidth <= 768) {
-        showPwaInstallToast();
-    }
+    // Always show the custom install toast
+    showPwaInstallToast();
 });
 
 function showPwaInstallToast() {
@@ -23,9 +21,9 @@ function showPwaInstallToast() {
                 <span class="material-icons-round text-[16px]">close</span>
             </button>
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a73e8] to-[#34a853] flex items-center justify-center text-white font-bold shrink-0">H</div>
+                <img src="/logo.png" class="w-10 h-10 object-contain shrink-0" alt="Logo">
                 <div>
-                    <h4 class="m-0 text-sm font-bold text-text-primary">Install HaxMail</h4>
+                    <h4 class="m-0 text-sm font-bold text-text-primary">Install Haxnation Mail</h4>
                     <p class="m-0 text-xs text-text-secondary">Add to Home Screen for faster access</p>
                 </div>
             </div>
