@@ -419,7 +419,7 @@ async function init() {
         avatar.title       = userData.name || userData.email || '';
 
         // Admin link
-        if (userData.userType === 'superadmin') {
+        if (userData.platformRole === 'SUPER_ADMIN') {
             document.getElementById('nav-admin-link').classList.remove('hidden');
         }
 
