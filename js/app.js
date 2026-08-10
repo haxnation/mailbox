@@ -2,55 +2,57 @@
 // PWA INSTALL PROMPT
 // =============================================================
 let deferredPrompt;
-
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar from appearing on mobile
     e.preventDefault();
-    // Stash the event so it can be triggered later.
     deferredPrompt = e;
-    
-    // Always show the custom install toast
-    showPwaInstallToast();
+    showPwaToast();
 });
 
-function showPwaInstallToast() {
-    // Only show if it hasn't been dismissed recently (optional, skipping for now)
+function showPwaToast() {
+    if (document.getElementById('pwa-install-toast')) return;
+    
     const toastHtml = `
-        <div id="pwa-toast" class="bg-bg-card border border-border shadow-lg rounded-xl p-4 flex items-center justify-between gap-4 max-w-sm w-full mx-auto relative pointer-events-auto">
-            <button onclick="document.getElementById('pwa-toast').remove()" class="absolute top-1 right-1 text-text-muted hover:text-text-primary p-1 bg-transparent border-none cursor-pointer">
-                <span class="material-icons-round text-[16px]">close</span>
-            </button>
-            <div class="flex items-center gap-3">
-                <img src="/logo.png" class="w-10 h-10 object-contain shrink-0" alt="Logo">
+        <div id="pwa-install-toast" style="position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 150%); opacity: 0; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 99999; background: #fff; border: 2px solid #0b0b0b; box-shadow: 4px 4px 0 0 #0b0b0b; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 90vw; width: 350px; font-family: 'JetBrains Mono', monospace, sans-serif;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="/logo.png" alt="Logo" style="width: 32px; height: 32px; object-fit: contain;">
                 <div>
-                    <h4 class="m-0 text-sm font-bold text-text-primary">Install Haxnation Mail</h4>
-                    <p class="m-0 text-xs text-text-secondary">Add to Home Screen for faster access</p>
+                    <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #0b0b0b;">Install App</h4>
+                    <p style="margin: 4px 0 0; font-size: 11px; color: #666;">Add to Home Screen</p>
                 </div>
             </div>
-            <button id="btn-install-pwa" class="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded font-medium text-sm border-none cursor-pointer whitespace-nowrap transition-colors">Install</button>
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-pwa-dismiss" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>
+                <button id="btn-pwa-install" style="background: #5ce1e6; color: #0b0b0b; border: 2px solid #0b0b0b; padding: 6px 12px; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0 0 #0b0b0b;">Install</button>
+            </div>
         </div>
     `;
+    document.body.insertAdjacentHTML('beforeend', toastHtml);
     
-    const container = document.getElementById('toast-container');
-    if (container) {
-        // Remove existing PWA toast if any
-        const existing = document.getElementById('pwa-toast');
-        if (existing) existing.remove();
-        
-        container.insertAdjacentHTML('beforeend', toastHtml);
-        
-        document.getElementById('btn-install-pwa').addEventListener('click', async () => {
-            const toast = document.getElementById('pwa-toast');
-            if (toast) toast.remove();
-            
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response to the install prompt: ${outcome}`);
-                deferredPrompt = null;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const toast = document.getElementById('pwa-install-toast');
+            if (toast) {
+                toast.style.transform = 'translate(-50%, 0)';
+                toast.style.opacity = '1';
             }
         });
-    }
+    });
+
+    document.getElementById('btn-pwa-dismiss').addEventListener('click', () => {
+        const toast = document.getElementById('pwa-install-toast');
+        toast.style.transform = 'translate(-50%, 150%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    });
+
+    document.getElementById('btn-pwa-install').addEventListener('click', async () => {
+        document.getElementById('pwa-install-toast').remove();
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        }
+    });
 }
 
 // =============================================================
