@@ -304,35 +304,36 @@
 <div id="app-shell" class="flex flex-col h-screen overflow-hidden">
 
     <!-- ===== TOP NAV ===== -->
-    <nav id="top-nav" class="hidden flex items-center justify-between gap-1 sm:gap-2 p-2 sm:px-4 bg-bg-sidebar border-b border-border shrink-0 z-50 shadow-sm w-full">
-        <!-- Mobile Sidebar Toggle -->
-        <button id="btn-mobile-menu" class="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors shrink-0" title="Menu">
-            <span class="material-icons-round">menu</span>
-        </button>
-
-        <a id="nav-logo" href="#" class="flex items-center gap-2 px-1 sm:px-2 no-underline min-w-0 sm:min-w-[180px] shrink-0">
-            <img src="/logo.png" alt="HaxMail" class="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0">
-            <span class="hidden sm:block text-[1.375rem] font-semibold text-text-secondary tracking-[-0.3px]">HaxMail</span>
-        </a>
-
-        <div id="nav-search-wrap" class="flex-1 min-w-[80px] max-w-[720px] mx-1 sm:mx-4">
-            <div id="nav-search-inner" class="relative bg-bg-hover rounded-full flex items-center px-3 transition-all focus-within:bg-bg-card focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_0_0_1px_var(--tw-colors-accent-DEFAULT)]">
-                <span class="material-icons-round text-text-muted text-[20px]">search</span>
-                <input type="search" id="global-search" class="flex-1 border-none bg-transparent p-2 sm:p-2.5 text-base font-sans text-text-primary outline-none placeholder:text-text-muted" placeholder="Search mail" autocomplete="off" spellcheck="false">
+    <nav id="top-nav" class="hidden sticky top-0 z-50 border-b-2 border-[#0b0b0b] bg-[#fafafa] w-full">
+        <div class="px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3 sm:gap-4 font-mono">
+            <button id="btn-mobile-menu" class="md:hidden flex items-center justify-center w-9 h-9 border-2 border-[#0b0b0b] hover:bg-[#5ce1e6] text-[#0b0b0b] transition-colors shrink-0" title="Menu">
+                <span class="material-icons-round text-[20px]">menu</span>
+            </button>
+    
+            <a id="nav-logo" href="#" class="flex items-center gap-2 no-underline shrink-0">
+                <img src="/logo.png" alt="HaxMail" class="h-7 sm:h-8 w-auto object-contain shrink-0">
+                <span class="hidden sm:inline font-mono text-[10px] font-bold uppercase tracking-widest text-[#0b0b0b] border-2 border-[#0b0b0b] px-1.5 py-0.5 bg-white">MAIL</span>
+            </a>
+    
+            <div id="nav-search-wrap" class="flex-1 min-w-[80px] max-w-[720px] mx-1 sm:mx-4">
+                <div id="nav-search-inner" class="relative border-2 border-[#0b0b0b] bg-white flex items-center px-3">
+                    <span class="material-icons-round text-[#0b0b0b] text-[20px]">search</span>
+                    <input type="search" id="global-search" class="flex-1 border-none bg-transparent p-2 sm:p-2.5 text-sm font-mono text-[#0b0b0b] outline-none placeholder:text-gray-400" placeholder="Search mail" autocomplete="off" spellcheck="false">
+                </div>
             </div>
-        </div>
-
-        <div id="nav-actions-right" class="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
-            <button class="nav-icon-btn flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" id="btn-dark-toggle" title="Toggle dark mode">
-                <span class="material-icons-round text-[20px] sm:text-[22px]" id="dark-icon">dark_mode</span>
-            </button>
-            <button class="nav-icon-btn hidden sm:flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" id="btn-refresh-nav" title="Refresh (r)">
-                <span class="material-icons-round text-[22px]">refresh</span>
-            </button>
-            <button class="nav-icon-btn hidden sm:flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-hover text-text-secondary transition-colors" id="btn-shortcuts-help" title="Keyboard shortcuts (?)">
-                <span class="material-icons-round text-[22px]">keyboard</span>
-            </button>
-            <div id="user-avatar" class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#9c27b0] text-white text-sm sm:text-[15px] font-semibold cursor-pointer ml-1 sm:ml-2 shrink-0 font-sans" title="Account">?</div>
+    
+            <div id="nav-actions-right" class="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
+                <button class="nav-icon-btn flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 border-2 border-transparent hover:border-[#0b0b0b] hover:bg-[#5ce1e6] text-[#0b0b0b] transition-all" id="btn-dark-toggle" title="Toggle dark mode">
+                    <span class="material-icons-round text-[18px] sm:text-[20px]" id="dark-icon">dark_mode</span>
+                </button>
+                <button class="nav-icon-btn hidden sm:flex items-center justify-center w-9 h-9 border-2 border-transparent hover:border-[#0b0b0b] hover:bg-[#5ce1e6] text-[#0b0b0b] transition-all" id="btn-refresh-nav" title="Refresh (r)">
+                    <span class="material-icons-round text-[20px]">refresh</span>
+                </button>
+                <button class="nav-icon-btn hidden sm:flex items-center justify-center w-9 h-9 border-2 border-transparent hover:border-[#0b0b0b] hover:bg-[#5ce1e6] text-[#0b0b0b] transition-all" id="btn-shortcuts-help" title="Keyboard shortcuts (?)">
+                    <span class="material-icons-round text-[20px]">keyboard</span>
+                </button>
+                <div id="user-avatar" class="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-[#5ce1e6] border-2 border-[#0b0b0b] text-[#0b0b0b] text-[10px] sm:text-xs font-bold cursor-pointer ml-1 sm:ml-2 shrink-0 font-mono" title="Account">?</div>
+            </div>
         </div>
     </nav>
 
@@ -676,6 +677,61 @@
       });
     });
   }
+</script>
+<script>
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showPwaToast();
+    });
+
+    function showPwaToast() {
+        if (document.getElementById('pwa-install-toast')) return;
+        
+        const toastHtml = \
+            <div id="pwa-install-toast" style="position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 150%); opacity: 0; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 99999; background: #fff; border: 2px solid #0b0b0b; box-shadow: 4px 4px 0 0 #0b0b0b; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 90vw; width: 350px; font-family: 'JetBrains Mono', monospace, sans-serif;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="/logo.png" alt="Logo" style="width: 32px; height: 32px; object-fit: contain;">
+                    <div>
+                        <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #0b0b0b;">Install App</h4>
+                        <p style="margin: 4px 0 0; font-size: 11px; color: #666;">Add to Home Screen</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-pwa-dismiss" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>
+                    <button id="btn-pwa-install" style="background: #5ce1e6; color: #0b0b0b; border: 2px solid #0b0b0b; padding: 6px 12px; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0 0 #0b0b0b;">Install</button>
+                </div>
+            </div>
+        \;
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+        
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const toast = document.getElementById('pwa-install-toast');
+                if (toast) {
+                    toast.style.transform = 'translate(-50%, 0)';
+                    toast.style.opacity = '1';
+                }
+            });
+        });
+
+        document.getElementById('btn-pwa-dismiss').addEventListener('click', () => {
+            const toast = document.getElementById('pwa-install-toast');
+            toast.style.transform = 'translate(-50%, 150%)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 500);
+        });
+
+        document.getElementById('btn-pwa-install').addEventListener('click', async () => {
+            document.getElementById('pwa-install-toast').remove();
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+            }
+        });
+    }
 </script>
 </body>
 </html>
