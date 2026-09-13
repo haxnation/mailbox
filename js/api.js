@@ -28,6 +28,39 @@ async function apiCall(endpoint, options = {}) {
 
 
 // =============================================================
+// ATTACHMENT DOWNLOAD (binary, cookie-authenticated)
+// =============================================================
+async function downloadEmailAttachment(mailbox, messageId, index, filename) {
+    const res = await fetch(
+        `${API_URL}/emails/${encodeURIComponent(mailbox)}/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(index)}`,
+        { credentials: 'include' }
+    );
+
+    if (res.status === 401 || res.status === 403) {
+        state.user = null;
+        showView('login');
+        throw new Error('Session expired. Please log in again.');
+    }
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const err = new Error(errData.error || 'Download failed');
+        err.status = res.status;
+        throw err;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'attachment';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+
+// =============================================================
 // MAILBOX LOADING
 // =============================================================
 async function loadMailboxes() {

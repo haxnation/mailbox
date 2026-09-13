@@ -409,15 +409,25 @@ async function loadEmailBody(email, container) {
 
         let attHtml = '';
         if (attachments.length > 0) {
+            const canDownload = !!email.messageId;
             attHtml = `
                 <div class="px-6 py-3 border-b border-border bg-bg-page flex flex-wrap gap-2">
-                    ${attachments.map(a => `
-                        <div class="inline-flex items-center gap-1 px-2 py-1 bg-bg-hover border border-border rounded-lg text-xs text-text-secondary whitespace-nowrap">
+                    ${attachments.map((a, i) => {
+                        const fname = a.filename || 'attachment';
+                        const downloadable = canDownload && !!a.key;
+                        const title = !canDownload
+                            ? 'Download unavailable'
+                            : downloadable
+                                ? `Click to download ${fname}`
+                                : 'File content not stored for this older email';
+                        return `
+                        <button class="att-download-btn inline-flex items-center gap-1 px-2 py-1 bg-bg-hover border border-border rounded-lg text-xs text-text-secondary whitespace-nowrap ${downloadable ? 'cursor-pointer hover:border-accent hover:text-text-primary' : 'opacity-60 cursor-not-allowed'}" data-att-idx="${i}" data-att-name="${escHtml(fname)}" title="${escHtml(title)}" ${downloadable ? '' : 'disabled'}>
                             <span class="material-icons-round text-[14px]">attach_file</span>
-                            <span>${escHtml(a.filename)}</span>
+                            <span>${escHtml(fname)}</span>
                             <span class="text-text-muted ml-1">${formatBytes(a.size)}</span>
-                        </div>
-                    `).join('')}
+                            ${downloadable ? '<span class="material-icons-round text-[14px] ml-1">download</span>' : ''}
+                        </button>`;
+                    }).join('')}
                 </div>
             `;
         }
@@ -443,6 +453,24 @@ async function loadEmailBody(email, container) {
         } else {
             container.querySelector('.body-html').innerHTML = htmlContent;
         }
+
+        // Wire up attachment downloads
+        container.querySelectorAll('.att-download-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = btn.getAttribute('data-att-idx');
+                const fname = btn.getAttribute('data-att-name') || 'attachment';
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                try {
+                    await downloadEmailAttachment(state.currentMailbox, email.messageId, idx, fname);
+                } catch (err) {
+                    showToast('Download failed: ' + err.message, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                }
+            });
+        });
 
         // Toggles
         const htmlBtn = container.querySelector('.body-toggle-btn[data-target="html"]');
@@ -472,6 +500,8 @@ async function loadEmailBody(email, container) {
 }
 
 function formatBytes(b) {
+    if (b == null || b === '' || isNaN(Number(b))) return '';
+    b = Number(b);
     if (b < 1024)      return b + ' B';
     if (b < 1048576)   return (b / 1024).toFixed(1) + ' KB';
     return (b / 1048576).toFixed(1) + ' MB';
