@@ -190,6 +190,7 @@ async function handleFileSelection(files) {
             const uploadRes = await fetch(uploadUrl, {
                 method:  'PUT',
                 body:    file,
+                credentials: 'include',
                 headers: { 'Content-Type': file.type || 'application/octet-stream' }
             });
 
